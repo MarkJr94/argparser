@@ -37,20 +37,24 @@ void test_split() {
 void test_find() {
 	using namespace std;
 	int r1 = find(string("are"),split(lol));
-	assert (r1 == 2);
+	assert (r1 == 9);
+	cout << "At index 9 should be \"are\": \"" << split(lol)[r1] << "\"\n";
 }
 
 int main() {
 	using namespace std;
 
 	ArgumentParser parser;
-	parser.addArgument("length", 20, ArgumentParser::INT, 'l',
-			ArgumentParser::STORE);
+	parser.addArgument("length", 20, ArgP::INT, 'l',
+			ArgP::STORE,true);
+
+	parser.addArgument("height", 20, ArgP::INT, 'h',
+				ArgP::STORE,true);
 
 	test_split();
 	test_find();
 
-	parser.parse("./go -l 5 -l 5 --length");
+	parser.parse("./go -l  6000000.45 -h 4");
 
 	return 0;
 }

@@ -12,18 +12,21 @@
 #include <string>
 #include <vector>
 
+namespace ArgP {
+typedef enum ArgumentType {
+	INT, BOOL, DOUBLE, STRING
+} ArgType;
+enum Action {
+	STORE, STORE_TRUE, STORE_FALSE
+};
+}
+
 class ArgumentParser {
 public:
-	typedef enum ArgumentType {
-		INT, BOOL, DOUBLE, STRING
-	} ArgType;
-	enum Action {
-		STORE, STORE_TRUE, STORE_FALSE
-	};
 
 	struct ArgInfo {
-		ArgType type;
-		Action action;
+		ArgP::ArgType type;
+		ArgP::Action action;
 		unsigned short count;
 		std::string dest;
 		bool found;
@@ -35,8 +38,8 @@ public:
 	~ArgumentParser();
 
 	template<class T>
-	void addArgument(std::string name, T def, ArgType type, char flag,
-			Action action, bool required = false, std::string help = "",
+	void addArgument(std::string name, T def, ArgP::ArgType type, char flag,
+			ArgP::Action action, bool required = false, std::string help = "",
 			std::string dest = "");
 
 	unsigned parse(std::string);
@@ -52,11 +55,13 @@ private:
 };
 
 template<class T>
-void ArgumentParser::addArgument(std::string name, T def, ArgType type,
-		char flag, Action action, bool required,
-		std::string help, std::string dest) {
+void ArgumentParser::addArgument(std::string name, T def, ArgP::ArgType type,
+		char flag, ArgP::Action action, bool required, std::string help,
+		std::string dest) {
+	using namespace ArgP;
+
 	ArgInfo& myInfo = argInfo[name];
-	myInfo = { type, action, 0, (dest.empty() ? name : dest ), false, required, flag};
+	myInfo = {type, action, 0, (dest.empty() ? name : dest ), false, required, flag};
 
 	dest = myInfo.dest;
 	switch (type) {
@@ -77,8 +82,7 @@ void ArgumentParser::addArgument(std::string name, T def, ArgType type,
 	}
 }
 
-
 std::vector<std::string> split(const std::string& str);
-
 int find(const std::string s, const std::vector<std::string>);
+void print(const std::vector<std::string>);
 #endif /* ARGUMENTPARSER_HPP_ */
