@@ -45,16 +45,19 @@ int main() {
 	using namespace std;
 
 	ArgumentParser parser;
-	parser.addArgument("length", 20, ArgP::INT, 'l',
+	parser.addArgument("length", 20, ArgP::DOUBLE, 'l',
 			ArgP::STORE,true);
 
 	parser.addArgument("height", 20, ArgP::INT, 'h',
 				ArgP::STORE,true);
 
+	parser.addArgument("name", "Kinsman", ArgP::STRING, 'n',
+					ArgP::STORE,true);
+
 	test_split();
 	test_find();
 
-	parser.parse("./go -l  6000000.45 -h 4");
+	parser.parse("./go -l  -6000001.45e-2 -h 45");
 
 	return 0;
 }

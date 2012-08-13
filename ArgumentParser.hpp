@@ -8,9 +8,20 @@
 #ifndef ARGUMENTPARSER_HPP_
 #define ARGUMENTPARSER_HPP_
 
+#include <exception>
+#include <iosfwd>
 #include <map>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+struct ArgParsExcept: public std::exception {
+	ArgParsExcept(const char * _msg) : msg(_msg) {}
+	~ArgParsExcept() {}
+	const char * what() const throw() { return msg;}
+private:
+	const char *msg;
+};
 
 namespace ArgP {
 typedef enum ArgumentType {
@@ -42,6 +53,9 @@ public:
 			ArgP::Action action, bool required = false, std::string help = "",
 			std::string dest = "");
 
+	template<class T>
+	T operator[](std::string dest);
+
 	unsigned parse(std::string);
 
 private:
@@ -59,6 +73,8 @@ void ArgumentParser::addArgument(std::string name, T def, ArgP::ArgType type,
 		char flag, ArgP::Action action, bool required, std::string help,
 		std::string dest) {
 	using namespace ArgP;
+
+	if (done) return;
 
 	ArgInfo& myInfo = argInfo[name];
 	myInfo = {type, action, 0, (dest.empty() ? name : dest ), false, required, flag};
@@ -79,6 +95,59 @@ void ArgumentParser::addArgument(std::string name, T def, ArgP::ArgType type,
 		break;
 	default:
 		break;
+	}
+}
+
+template<>
+void ArgumentParser::addArgument <std::string> (std::string name, T def, ArgP::ArgType type,
+		char flag, ArgP::Action action, bool required, std::string help,
+		std::string dest) {
+	using namespace ArgP;
+
+	if (done) return;
+
+	ArgInfo& myInfo = argInfo[name];
+	myInfo = {type, action, 0, (dest.empty() ? name : dest ), false, required, flag};
+
+	dest = myInfo.dest;
+	switch (type) {
+	case INT:
+		intMap[dest] = def;
+		break;
+	case BOOL:
+		boolMap[dest] = def;
+		break;
+	case DOUBLE:
+		doubleMap[dest] = def;
+		break;
+	case STRING:
+		stringMap[dest] = def;
+		break;
+	default:
+		break;
+	}
+}
+
+template<class T>
+T ArgumentParser::operator[](std::string dest) {
+	using namespace std;
+	using namespace ArgP;
+
+	auto it = argInfo.find(dest);
+	if (it == argInfo.end()) {
+		string errstr = "No such argument \"" + dest + "\"";
+		throw (ArgParsExcept(errstr.c_str()));
+	}
+
+	switch (it->second.type) {
+	case INT:
+		return intMap[dest];
+	case DOUBLE:
+		return doubleMap[dest];
+	case STRING:
+		return stringMap[dest];
+	case BOOL:
+		return boolMap[dest];
 	}
 }
 
