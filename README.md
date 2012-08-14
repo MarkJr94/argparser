@@ -27,7 +27,7 @@ A simple argument parser, meant to parse any string. It is inspired by the Pytho
 
 Example use:
 
-std::string longstring =
+	std::string longstring =
 		"Unlike traditional c-strings, which are mere sequences of characters in a memory array,"
 		" C++ string objects belong to a class with many built-in features to operate with"
 		" strings in a more intuitive way and with some additional useful features common " ""
