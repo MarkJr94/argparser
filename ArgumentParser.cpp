@@ -284,21 +284,26 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 		bool b;
 
 		stringstream possible;
-		possible << argvec[first + 1];
-		string p = argvec[first + 1];
+		string p;
+		if (first +1 >= argvec.size() && info.type != BOOL) {
+			errstr = "Option not given for argument\"" + name+"\"";
+			help();
+			throw(ArgParseExcept(errstr.c_str()));
+		}
 
 		switch (info.type) {
 		case INT:
+			possible << argvec[first + 1];
 			possible >> i;
 			intMap[name] = i;
 			break;
 		case FLOAT:
+			p = argvec[first + 1];
 			f = saferFloat(p);
 			floatMap[name] = f;
 			break;
 		case STRING:
-			possible >> s;
-			stringMap[name] = s;
+			stringMap[name] = argvec[first + 1];;
 			break;
 		case BOOL:
 			boolMap[name] = !boolMap[name];
