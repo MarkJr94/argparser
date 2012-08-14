@@ -30,20 +30,31 @@ private:
 
 namespace ArgP {
 typedef enum ArgumentType {
-	INT, BOOL, FLOAT, STRING
+	INT, BOOL, FLOAT, STRING, VSTRING
 } Type;
-enum Action {
-	STORE, STORE_TRUE, STORE_FALSE
-};
 }
+;
 
-union Argument {
-	double d;
-	int i;
-	bool b;
-	std::string s;
-};
-
+/*
+ * Simple class to parse arguments. The Highlights are:
+ * 	A templated addarg method, to tell it what to look for.
+ * 	A templated getarg method, which will return the argument you want.
+ *
+ * The arguments are stored in maps, and so are accessed by the name you
+ * 	give them in the addarguments method
+ *
+ * The parse method can be called either on an (int argc char **argv) pair or
+ * 	a std::string.
+ *
+ * There are no static or global variables so you can have as many parsers as
+ * 	you want.
+ *
+ * The parser can take arguments of 5 types, int, bool, float, string, list of strings.
+ * 	the boolean argument flag takes no option
+ *
+ * You can specify if any argument is required or not, as well as default values for all
+ * 	but the string list argument types.
+ */
 class ArgumentParser {
 public:
 
@@ -56,31 +67,42 @@ public:
 		ArgP::Type type;
 	};
 
-	ArgumentParser();
+	/* Constructor sets name displaed as program name in help string
+	 */
+	ArgumentParser(const std::string& name = "program");
 	~ArgumentParser();
 
+	/* Once parsing had been done, you have to
+	 * call this function if you want to add new arguments
+	 * and parse something else
+	 */
 	void clear();
-	void addIntArg(const std::string& name, const int def, const char flag,
+
+	/* Function to add arguments */
+	template<class T>
+	void addarg(const std::string& name, const T def, const char flag,
 			const bool required = false, const std::string& help = "");
 
-	void addFloatArg(const std::string& name, const float def, const char flag,
-			const bool required = false, const std::string& help = "");
-
-	void addStringArg(const std::string& name, const std::string& def,
+	/* Function to add argument vector */
+	void addarglist(const std::string& name,
 			const char flag, const bool required = false,
 			const std::string& help = "");
 
-	void addFlagArg(const std::string& name, const bool def, const char flag,
-			const bool required = false, const std::string& help = "");
+	/* Function to return arguments of various types */
+	template<class T>
+	T getarg(const std::string&) const;
 
-	bool flagArg(const std::string name) const;
-	int intArg(const std::string& name) const;
-	float floatArg(const std::string& name) const;
-	std::string stringArg(const std::string& name) const;
+	/* Function to return argument vector */
+	std::vector<std::string> getarglist(const std::string&) const;
 
-	unsigned parse(int argc, const char *argv[]);
+	/* Can parse argc and argv or  a string */
+	unsigned parse(const int argc, char *argv[]);
 	unsigned parse(const std::string&);
 
+	/* You can get the argv last parsed.
+	 * as well as a vector with each string sorted in
+	 * the order they were parsed
+	 */
 	std::string getArgv() const {
 		return argv;
 	}
@@ -88,15 +110,20 @@ public:
 		return sortedArgvVector;
 	}
 
+	/* To print help message */
+	void help() const;
+
 private:
 	std::map<std::string, ArgInfo> infoMap;
 	std::map<std::string, int> intMap;
 	std::map<std::string, bool> boolMap;
 	std::map<std::string, float> floatMap;
 	std::map<std::string, std::string> stringMap;
+	std::map<std::string, std::vector<std::string> > vecMap;
 	std::vector<std::string> sortedArgvVector;
 	bool done;
 	std::string argv;
+	std::string name;
 
 	std::vector<std::string> split(const std::string& str);
 	int find(const std::string s, const std::vector<std::string>);
@@ -105,4 +132,6 @@ private:
 };
 
 
+
+void printStrVec(const std::vector<std::string>&);
 #endif /* ARGUMENTPARSER_HPP_ */

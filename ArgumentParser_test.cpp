@@ -9,31 +9,41 @@
 #include <iostream>
 #include <cassert>
 
-void test_parser() {
+std::string longstring =
+		"Unlike traditional c-strings, which are mere sequences of characters in a memory array,"
+		" C++ string objects belong to a class with many built-in features to operate with"
+		" strings in a more intuitive way and with some additional useful features common " ""
+		"to C++ containers.";
+
+void test_parser(int argc, char *argv[]) {
 	using namespace std;
 
-	ArgumentParser parser;
-	parser.addFloatArg("length", 20, 'l', true);
-	parser.addIntArg("height", 20, 'h', true);
-	parser.addStringArg("name", "Kinsman", 'n', true);
+	ArgumentParser parser("ArgumentParser_test.cpp");
+	parser.addarg<float>("length", 20, 'l', true);
+	parser.addarg<int>("height", 20, 'h', true);
+	parser.addarg<string>("name", "Kinsman", 'n', true);
 	parser.parse("./go -l  -6001.45e-2 -h 45 -n Joe");
-	assert(parser.stringArg("name") == "Joe");
-	assert(parser.floatArg("length") - -6001.45e-2 < .0001);
-	assert(parser.intArg("height") == 45);
+	assert(parser.getarg<string>("name") == "Joe");
+	assert(parser.getarg<float>("length") - -6001.45e-2 < .0001);
+	assert(parser.getarg<int>("height") == 45);
 	try {
-		bool b = parser.flagArg("lol");
+		bool b = parser.getarg<bool>("lol");
 	} catch (ArgParseExcept& e) {
 		cout << "Exception successfully thrown\n";
 	}
 
 	parser.clear();
-	parser.addFlagArg("lol", false,'l',true,"I am here to test you");
-	parser.addIntArg("rofl", 25,'r',true,"I am here to test you as well");
-	parser.addFlagArg("mao", true,'m',false,"I am here to test you too");
-	parser.parse("./go-again -l -r 334");
-	assert(parser.intArg("rofl") == 334);
-	assert(parser.flagArg("lol") == true);
-	assert(parser.flagArg("mao") == true);
+	parser.addarg<bool>("lol", false, 'l', true, "I am here to test you ");
+	parser.addarg<int>("rofl", 25, 'r', true, "I am here to test you as well");
+	parser.addarg<bool>("mao", true, 'm', false, longstring + " This string tests my wrapping");
+	parser.addarglist("hare",'h',true,"I test vector input");
+	parser.parse("./go-again -l -r 334 -h 1 2 3 4 5");
+	assert(parser.getarg<int>("rofl") == 334);
+	assert(parser.getarg<bool>("lol") == true);
+	assert(parser.getarg<bool>("mao") == true);
+	cout << "Expect: \"1 2 3 4 5\"\n";
+	printStrVec(parser.getarglist("hare"));
+	parser.help();
 
 	cout << "Parser testing successful!\n";
 }
@@ -41,7 +51,7 @@ void test_parser() {
 int main(int argc, char* argv[]) {
 	using namespace std;
 
-	test_parser();
+	test_parser(argc, argv);
 
 	return 0;
 }

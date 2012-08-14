@@ -14,8 +14,8 @@
 #include <stdexcept>
 #include <sstream>
 
-ArgumentParser::ArgumentParser() :
-		done(false), argv("") {
+ArgumentParser::ArgumentParser(const std::string& _name) :
+		done(false), argv(""), name(_name) {
 }
 
 ArgumentParser::~ArgumentParser() {
@@ -41,7 +41,8 @@ std::vector<std::string> ArgumentParser::split(const std::string& str) {
 	return ret;
 }
 
-int ArgumentParser::find(const std::string s, const std::vector<std::string> strvec) {
+int ArgumentParser::find(const std::string s,
+		const std::vector<std::string> strvec) {
 	int found = -1;
 	int index = 0;
 	for (auto& str : strvec) {
@@ -59,6 +60,12 @@ void ArgumentParser::printStrVec(const std::vector<std::string>& strVec) {
 	for (auto &s : strVec)
 		std::cout << s << std::endl;
 }
+
+void printStrVec(const std::vector<std::string>& strVec) {
+	for (auto &s : strVec)
+		std::cout << s << std::endl;
+}
+
 
 float ArgumentParser::saferFloat(const std::string & ss) {
 	using namespace std;
@@ -110,78 +117,113 @@ float ArgumentParser::saferFloat(const std::string & ss) {
 	return d1;
 }
 
-void ArgumentParser::addIntArg(const std::string& name, const int def,
+template<>
+void ArgumentParser::addarg<int>(const std::string& name, const int def,
 		const char flag, const bool required, const std::string& help) {
 	infoMap[name] = {0, false, required, flag, help, ArgP::INT};
 	intMap[name] = def;
 }
 
-void ArgumentParser::addFlagArg(const std::string& name, const bool def,
+template<>
+void ArgumentParser::addarg<bool>(const std::string& name, const bool def,
 		const char flag, const bool required, const std::string& help) {
 	infoMap[name] = {0, false, required, flag, help, ArgP::BOOL};
 	boolMap[name] = def;
 }
 
-void ArgumentParser::addFloatArg(const std::string& name, const float def,
+template<>
+void ArgumentParser::addarg<float>(const std::string& name, const float def,
 		const char flag, const bool required, const std::string& help) {
 	infoMap[name] = {0, false, required, flag, help, ArgP::FLOAT};
 	floatMap[name] = def;
 }
 
-void ArgumentParser::addStringArg(const std::string& name,
-		const std::string& def, const char flag, const bool required,
+template<>
+void ArgumentParser::addarg<std::string>(const std::string& name,
+		const std::string def, const char flag, const bool required,
 		const std::string& help) {
 	infoMap[name] = {0, false, required, flag, help, ArgP::STRING};
 	stringMap[name] = def;
 }
 
-bool ArgumentParser::flagArg(const std::string name) const {
+void ArgumentParser::addarglist(const std::string& name,const char flag,
+		const bool required, const std::string& help) {
+	using namespace ArgP;
+
+	infoMap[name] = {0, false, required, flag, help, VSTRING};
+}
+
+
+std::vector<std::string> ArgumentParser::getarglist(const std::string& name) const {
+	using namespace std;
+
+	map<string, vector<string> >::const_iterator it;
+	if ((it = vecMap.find(name)) == vecMap.end()) {
+		string errstr = "Non-existent argument \"" + name + "\" requested";
+		help();
+		throw(ArgParseExcept(errstr.c_str()));
+	}
+
+	return it->second;
+}
+
+template<>
+bool ArgumentParser::getarg<bool>(const std::string& name) const {
 	using namespace std;
 
 	map<string, bool>::const_iterator it = boolMap.begin();
 	if ((it = boolMap.find(name)) == boolMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
+		help();
 		throw(ArgParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
 
-int ArgumentParser::intArg(const std::string& name) const {
+template<>
+int ArgumentParser::getarg<int>(const std::string& name) const {
 	using namespace std;
 
 	map<string, int>::const_iterator it;
 	if ((it = intMap.find(name)) == intMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
+		help();
 		throw(ArgParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
-float ArgumentParser::floatArg(const std::string& name) const {
+
+template<>
+float ArgumentParser::getarg<float>(const std::string& name) const {
 	using namespace std;
 
 	map<string, float>::const_iterator it;
 	if ((it = floatMap.find(name)) == floatMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
+		help();
 		throw(ArgParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
-std::string ArgumentParser::stringArg(const std::string& name) const {
+
+template<>
+std::string ArgumentParser::getarg<std::string>(const std::string& name) const {
 	using namespace std;
 
 	map<string, string>::const_iterator it;
 	if ((it = stringMap.find(name)) == stringMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
+		help();
 		throw(ArgParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
 
-unsigned ArgumentParser::parse(int argc, const char * _argv[]) {
+unsigned ArgumentParser::parse(const int argc, char * _argv[]) {
 	using namespace std;
 	using namespace ArgP;
 
@@ -190,6 +232,7 @@ unsigned ArgumentParser::parse(int argc, const char * _argv[]) {
 
 	for (int i = 0; i < argc; i++) {
 		argv += _argv[i];
+		argv += " ";
 	}
 
 	return parse(argv);
@@ -222,6 +265,7 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 		if (r1 < 1 && r2 < 1) {
 			if (info.required) {
 				errstr = "Required arg \"" + name + "\" not found";
+				help();
 				throw(ArgParseExcept(errstr.c_str()));
 			} else {
 				continue;
@@ -237,6 +281,7 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 		float f;
 		int i;
 		string s;
+		bool b;
 
 		stringstream possible;
 		possible << argvec[first + 1];
@@ -258,13 +303,23 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 		case BOOL:
 			boolMap[name] = !boolMap[name];
 			break;
-		default:
+		case VSTRING:
+			int ind = first + 1;
+			for (p = argvec[ind]; ind < argvec.size(); ) {
+				p = argvec[ind++];
+				if (p[0] == '-')
+					if (p.size() == 2)
+						if (!isdigit(p[1]))
+							break;
+				vecMap[name].push_back(p);
+			}
 			break;
 		}
 
 		if (possible.fail()) {
 			errstr = "Invalid argument \"" + p + "\" specified for option: \"";
 			errstr += name + "\"";
+			help();
 			throw(ArgParseExcept(errstr.c_str()));
 		}
 
@@ -285,4 +340,67 @@ void ArgumentParser::clear() {
 	boolMap.clear();
 	floatMap.clear();
 	argv.clear();
+}
+
+#define opreq( x ) ( x ? "Yes" : "No")
+
+void ArgumentParser::help() const {
+	using namespace std;
+	using namespace ArgP;
+
+	cout << "Usage:\t./" << name << " ";
+
+	for (auto it = infoMap.begin(); it != infoMap.end(); it++) {
+		const ArgInfo info = it->second;
+		string upname = it->first;
+		for (char& c : upname)
+			c = toupper(c);
+
+		cout << "[--" << it->first << " " << (info.type == BOOL ? "" : upname)
+				<< "] ";
+	}
+	cout << endl;
+
+	cout << "Options:\n\n";
+	for (auto it = infoMap.begin(); it != infoMap.end(); it++) {
+		const ArgInfo info = it->second;
+		string upname = it->first;
+		for (char& c : upname)
+			c = toupper(c);
+
+		cout << "--" << it->first << " (-" << info.flag << ")" << "\t";
+
+		cout << "Required: " << opreq(info.required);
+		cout << "\tType: ";
+
+		switch (info.type) {
+		case INT:
+			cout << "INT\n";
+			break;
+		case FLOAT:
+			cout << "FLOAT\n";
+			break;
+		case BOOL:
+			cout << "BOOL\n";
+			break;
+		case STRING:
+			cout << "STRING\n";
+			break;
+		default:
+			cout << "VECTOR\n";
+			break;
+		}
+
+		cout << "\t";
+		int i = 0;
+		for (auto& c : info.help) {
+			cout << c;
+			if (i > 60 && isspace(c)) {
+				cout << "\n\t\t";
+				i = 0;
+			}
+			i++;
+		}
+		cout << "\n\n";
+	}
 }
