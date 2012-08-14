@@ -27,7 +27,7 @@ A simple argument parser, meant to parse any string. It is inspired by the Pytho
 
 Example use:
 
-	std::string longstring =
+		std::string longstring =
 		"Unlike traditional c-strings, which are mere sequences of characters in a memory array,"
 		" C++ string objects belong to a class with many built-in features to operate with"
 		" strings in a more intuitive way and with some additional useful features common " ""
@@ -41,7 +41,7 @@ Example use:
 	parser.parse("./go-again -l -r 334 -h 1 2 3 4 5");
 	assert(parser.getarg<int>("rofl") == 334);
 	assert(parser.getarg<bool>("lol") == true);
-	assert(parser.getarg<bool>("mao") == "TseTong");
+	assert(parser.getarg<string>("mao") == "TseTong");
 	cout << "Expect: \"1 2 3 4 5\"\n";
 	printStrVec(parser.getarglist("hare"));
 	parser.help();
