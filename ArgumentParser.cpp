@@ -65,7 +65,6 @@ float ArgumentParser::saferFloat(const std::string & ss) {
 
 	float d1;
 	int pos, minPos, decPos, ePos;
-	cout << "from string \"" << ss << "\"\n";
 
 	string validChars = "0123456789-.e";
 	/* Check for valid characters */
@@ -107,8 +106,6 @@ float ArgumentParser::saferFloat(const std::string & ss) {
 	if (sss.fail()) {
 		throw ArgParseExcept("float input failed");
 	}
-	cout.precision(15);
-	cout << d1 << " is your float input.\n";
 
 	return d1;
 }
@@ -213,7 +210,6 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 
 	unsigned total = 0;
 
-//	map<string, ArgInfo>::iterator it = argInfo.begin	print(sortedArgv);();
 	for (auto it = infoMap.begin(); it != infoMap.end(); it++) {
 		string name = it->first;
 		ArgInfo& info = it->second;
@@ -249,17 +245,14 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 		switch (info.type) {
 		case INT:
 			possible >> i;
-			cout << i;
 			intMap[name] = i;
 			break;
 		case FLOAT:
 			f = saferFloat(p);
-			cout << f;
 			floatMap[name] = f;
 			break;
 		case STRING:
 			possible >> s;
-			cout << s;
 			stringMap[name] = s;
 			break;
 		case BOOL:
@@ -274,9 +267,6 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 			errstr += name + "\"";
 			throw(ArgParseExcept(errstr.c_str()));
 		}
-
-		cout << endl;
-		cout << name << ": Found at " << first << "\n";
 
 		sortedArgvVector.push_back(name);
 		sortedArgvVector.push_back(p);
