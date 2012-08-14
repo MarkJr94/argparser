@@ -9,55 +9,39 @@
 #include <iostream>
 #include <cassert>
 
-const std::string s = "Hello folks,\n i am a \tginormous elephant";
-const std::string hello = "Hello";
-const std::string lol =
-		"both the antec 620w and the silencer mk3 600w are made by seasonic"
-		"and iirc are both on the s12II platform. The pcpc has a 5 year warranty"
-		"though rather than antec's 3 year. DOA parts unfortunately happen with any" ""
-		"brand, which is why parts should always be tested while you can still return them.";
-
-void test_split() {
-	using namespace std;
-
-	vector<string> b = split(s);
-
-	for (auto& p : b)
-		cout << p << endl;
-	int i = 0;
-	assert(b[0] == "Hello");
-	assert(b[1] == "folks,");
-	assert(b[2] == "i");
-	assert(b[5] == "ginormous");
-	assert(b[6] == "elephant");
-	assert(b.size() == 7);
-	i = 0;
-}
-
-void test_find() {
-	using namespace std;
-	int r1 = find(string("are"),split(lol));
-	assert (r1 == 9);
-	cout << "At index 9 should be \"are\": \"" << split(lol)[r1] << "\"\n";
-}
-
-int main() {
+void test_parser() {
 	using namespace std;
 
 	ArgumentParser parser;
-	parser.addArgument("length", 20, ArgP::DOUBLE, 'l',
-			ArgP::STORE,true);
+	parser.addFloatArg("length", 20, 'l', true);
+	parser.addIntArg("height", 20, 'h', true);
+	parser.addStringArg("name", "Kinsman", 'n', true);
+	parser.parse("./go -l  -6001.45e-2 -h 45 -n Joe");
+	assert(parser.stringArg("name") == "Joe");
+	assert(parser.floatArg("length") - -6001.45e-2 < .0001);
+	assert(parser.intArg("height") == 45);
+	try {
+		bool b = parser.flagArg("lol");
+	} catch (ArgParseExcept& e) {
+		cout << "Exception successfully thrown\n";
+	}
 
-	parser.addArgument("height", 20, ArgP::INT, 'h',
-				ArgP::STORE,true);
+	parser.clear();
+	parser.addFlagArg("lol", false,'l',true,"I am here to test you");
+	parser.addIntArg("rofl", 25,'r',true,"I am here to test you as well");
+	parser.addFlagArg("mao", true,'m',false,"I am here to test you too");
+	parser.parse("./go-again -l -r 334");
+	assert(parser.intArg("rofl") == 334);
+	assert(parser.flagArg("lol") == true);
+	assert(parser.flagArg("mao") == true);
 
-	parser.addArgument("name", "Kinsman", ArgP::STRING, 'n',
-					ArgP::STORE,true);
+	cout << "Parser testing successful!\n";
+}
 
-	test_split();
-	test_find();
+int main(int argc, char* argv[]) {
+	using namespace std;
 
-	parser.parse("./go -l  -6000001.45e-2 -h 45");
+	test_parser();
 
 	return 0;
 }

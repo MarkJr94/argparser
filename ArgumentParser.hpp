@@ -15,143 +15,94 @@
 #include <string>
 #include <vector>
 
-struct ArgParsExcept: public std::exception {
-	ArgParsExcept(const char * _msg) : msg(_msg) {}
-	~ArgParsExcept() {}
-	const char * what() const throw() { return msg;}
+struct ArgParseExcept: public std::exception {
+	ArgParseExcept(const char * _msg) :
+			msg(_msg) {
+	}
+	~ArgParseExcept() {
+	}
+	const char * what() const throw () {
+		return msg;
+	}
 private:
 	const char *msg;
 };
 
 namespace ArgP {
 typedef enum ArgumentType {
-	INT, BOOL, DOUBLE, STRING
-} ArgType;
+	INT, BOOL, FLOAT, STRING
+} Type;
 enum Action {
 	STORE, STORE_TRUE, STORE_FALSE
 };
 }
 
+union Argument {
+	double d;
+	int i;
+	bool b;
+	std::string s;
+};
+
 class ArgumentParser {
 public:
 
 	struct ArgInfo {
-		ArgP::ArgType type;
-		ArgP::Action action;
 		unsigned short count;
-		std::string dest;
 		bool found;
 		bool required;
 		char flag;
+		std::string help;
+		ArgP::Type type;
 	};
 
 	ArgumentParser();
 	~ArgumentParser();
 
-	template<class T>
-	void addArgument(std::string name, T def, ArgP::ArgType type, char flag,
-			ArgP::Action action, bool required = false, std::string help = "",
-			std::string dest = "");
+	void clear();
+	void addIntArg(const std::string& name, const int def, const char flag,
+			const bool required = false, const std::string& help = "");
 
-	template<class T>
-	T operator[](std::string dest);
+	void addFloatArg(const std::string& name, const float def, const char flag,
+			const bool required = false, const std::string& help = "");
 
-	unsigned parse(std::string);
+	void addStringArg(const std::string& name, const std::string& def,
+			const char flag, const bool required = false,
+			const std::string& help = "");
+
+	void addFlagArg(const std::string& name, const bool def, const char flag,
+			const bool required = false, const std::string& help = "");
+
+	bool flagArg(const std::string name) const;
+	int intArg(const std::string& name) const;
+	float floatArg(const std::string& name) const;
+	std::string stringArg(const std::string& name) const;
+
+	unsigned parse(int argc, const char *argv[]);
+	unsigned parse(const std::string&);
+
+	std::string getArgv() const {
+		return argv;
+	}
+	std::vector<std::string> getSortedArgvVector() const {
+		return sortedArgvVector;
+	}
 
 private:
-
-	std::map<std::string, ArgInfo> argInfo;
+	std::map<std::string, ArgInfo> infoMap;
 	std::map<std::string, int> intMap;
 	std::map<std::string, bool> boolMap;
-	std::map<std::string, double> doubleMap;
+	std::map<std::string, float> floatMap;
 	std::map<std::string, std::string> stringMap;
+	std::vector<std::string> sortedArgvVector;
 	bool done;
+	std::string argv;
+
+	std::vector<std::string> split(const std::string& str);
+	int find(const std::string s, const std::vector<std::string>);
+	void printStrVec(const std::vector<std::string>&);
+	float saferFloat(const std::string &);
 };
 
-template<class T>
-void ArgumentParser::addArgument(std::string name, T def, ArgP::ArgType type,
-		char flag, ArgP::Action action, bool required, std::string help,
-		std::string dest) {
-	using namespace ArgP;
 
-	if (done) return;
-
-	ArgInfo& myInfo = argInfo[name];
-	myInfo = {type, action, 0, (dest.empty() ? name : dest ), false, required, flag};
-
-	dest = myInfo.dest;
-	switch (type) {
-	case INT:
-		intMap[dest] = def;
-		break;
-	case BOOL:
-		boolMap[dest] = def;
-		break;
-	case DOUBLE:
-		doubleMap[dest] = def;
-		break;
-	case STRING:
-		stringMap[dest] = def;
-		break;
-	default:
-		break;
-	}
-}
-
-template<>
-void ArgumentParser::addArgument <std::string> (std::string name, T def, ArgP::ArgType type,
-		char flag, ArgP::Action action, bool required, std::string help,
-		std::string dest) {
-	using namespace ArgP;
-
-	if (done) return;
-
-	ArgInfo& myInfo = argInfo[name];
-	myInfo = {type, action, 0, (dest.empty() ? name : dest ), false, required, flag};
-
-	dest = myInfo.dest;
-	switch (type) {
-	case INT:
-		intMap[dest] = def;
-		break;
-	case BOOL:
-		boolMap[dest] = def;
-		break;
-	case DOUBLE:
-		doubleMap[dest] = def;
-		break;
-	case STRING:
-		stringMap[dest] = def;
-		break;
-	default:
-		break;
-	}
-}
-
-template<class T>
-T ArgumentParser::operator[](std::string dest) {
-	using namespace std;
-	using namespace ArgP;
-
-	auto it = argInfo.find(dest);
-	if (it == argInfo.end()) {
-		string errstr = "No such argument \"" + dest + "\"";
-		throw (ArgParsExcept(errstr.c_str()));
-	}
-
-	switch (it->second.type) {
-	case INT:
-		return intMap[dest];
-	case DOUBLE:
-		return doubleMap[dest];
-	case STRING:
-		return stringMap[dest];
-	case BOOL:
-		return boolMap[dest];
-	}
-}
-
-std::vector<std::string> split(const std::string& str);
-int find(const std::string s, const std::vector<std::string>);
-void print(const std::vector<std::string>);
 #endif /* ARGUMENTPARSER_HPP_ */
