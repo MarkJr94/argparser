@@ -22,7 +22,7 @@ A simple argument parser, meant to parse any string. It is inspired by the Pytho
  *
  * You can specify if any argument is required or not, as well as default values for all
  * 	but the string list argument types.
- * It also prints a default help message, similar to the one Python's argpaarser prints
+ * It also prints a default help message, similar to the one Python's argparser prints
  */
 
 Example use:
