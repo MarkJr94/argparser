@@ -18,31 +18,40 @@ std::string longstring =
 void test_parser(int argc, char *argv[]) {
 	using namespace std;
 
-	ArgumentParser parser("ArgumentParser_test.cpp");
+	AP::ArgumentParser parser("ArgumentParser_test.cpp");
+
 	parser.addarg<float>("length", 20, 'l', true);
 	parser.addarg<int>("height", 20, 'h', true);
 	parser.addarg<string>("name", "Kinsman", 'n', true);
+
 	parser.parse("./go -l  -6001.45e-2 -h 45 -n Joe");
+
 	assert(parser.getarg<string>("name") == "Joe");
 	assert(parser.getarg<float>("length") - -6001.45e-2 < .0001);
 	assert(parser.getarg<int>("height") == 45);
+
 	try {
 		bool b = parser.getarg<bool>("lol");
-	} catch (ArgParseExcept& e) {
+	} catch (AP::ArgParseExcept& e) {
 		cout << "Exception successfully thrown\n";
 	}
 
 	parser.clear();
+
 	parser.addarg<bool>("lol", false, 'l', true, "I am here to test you ");
 	parser.addarg<int>("rofl", 25, 'r', true, "I am here to test you as well");
 	parser.addarg<bool>("mao", true, 'm', false, longstring + " This string tests my wrapping");
 	parser.addarglist("hare",'h',true,"I test vector input");
+
 	parser.parse("./go-again -l -r 334 -h 1 2 3 4 5");
+
 	assert(parser.getarg<int>("rofl") == 334);
 	assert(parser.getarg<bool>("lol") == true);
 	assert(parser.getarg<bool>("mao") == true);
+
 	cout << "Expect: \"1 2 3 4 5\"\n";
-	printStrVec(parser.getarglist("hare"));
+	AP::printVec(parser.getarglist("hare"),' ');
+
 	parser.help();
 
 	cout << "Parser testing successful!\n";

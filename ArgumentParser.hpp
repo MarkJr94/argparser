@@ -9,11 +9,26 @@
 #define ARGUMENTPARSER_HPP_
 
 #include <exception>
-#include <iosfwd>
+#include <iostream>
 #include <map>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+namespace AP {
+typedef enum ArgumentType {
+	INT, BOOL, FLOAT, STRING, VSTRING
+} Type;
+
+std::vector<std::string> split(const std::string& str, const char separator = ' ');
+
+template <typename T>
+typename std::vector<T>::iterator find(const T& elem, std::vector<T>&);
+
+template <typename T>
+void printVec(const std::vector<T>&, const char separator = '\n');
+
+float saferFloat(const std::string &);
 
 struct ArgParseExcept: public std::exception {
 	ArgParseExcept(const char * _msg) :
@@ -27,13 +42,6 @@ struct ArgParseExcept: public std::exception {
 private:
 	const char *msg;
 };
-
-namespace ArgP {
-typedef enum ArgumentType {
-	INT, BOOL, FLOAT, STRING, VSTRING
-} Type;
-}
-;
 
 /*
  * Simple class to parse arguments. The Highlights are:
@@ -64,7 +72,7 @@ public:
 		bool required;
 		char flag;
 		std::string help;
-		ArgP::Type type;
+		AP::Type type;
 	};
 
 	/* Constructor sets name displaed as program name in help string
@@ -79,7 +87,7 @@ public:
 	void clear();
 
 	/* Function to add arguments */
-	template<class T>
+	template<typename T>
 	void addarg(const std::string& name, const T def, const char flag,
 			const bool required = false, const std::string& help = "");
 
@@ -89,7 +97,7 @@ public:
 			const std::string& help = "");
 
 	/* Function to return arguments of various types */
-	template<class T>
+	template<typename T>
 	T getarg(const std::string&) const;
 
 	/* Function to return argument vector */
@@ -124,14 +132,31 @@ private:
 	bool done;
 	std::string argv;
 	std::string name;
-
-	std::vector<std::string> split(const std::string& str);
-	int find(const std::string s, const std::vector<std::string>);
-	void printStrVec(const std::vector<std::string>&);
-	float saferFloat(const std::string &);
 };
+}
 
+/*
+ * Prints a vector of std::strings, with
+ * each string on a newline
+ */
+template <typename T>
+void AP::printVec(const std::vector<T>& vec,const char separator) {
+	for (auto &elem : vec)
+		std::cout << elem << separator;
+	std::cout << '\n';
+}
 
-
-void printStrVec(const std::vector<std::string>&);
+/* Takes a std::string and a vector of std::strings
+ * and searches for the string involved, returning an int
+ * indicating it's position
+ */
+template <typename T>
+typename std::vector<T>::iterator AP::find(const T& elem,
+		std::vector<T>& vec) {
+	typename std::vector<T>::iterator it;
+	for (it = vec.begin(); it != vec.end(); it++) {
+		if (*it == elem) break;
+	}
+	return it;
+}
 #endif /* ARGUMENTPARSER_HPP_ */
