@@ -33,30 +33,34 @@ Example use:
 		" strings in a more intuitive way and with some additional useful features common " ""
 		"to C++ containers.";
 
-	ArgumentParser parser("ArgumentParser_test.cpp");
-	parser.addarg<bool>("lol", false, 'l', true, "I am here to test you ");
-	parser.addarg<int>("rofl", 25, 'r', true, "I am here to test you as well");
-	parser.addarg<string>("mao", "TseTong", 'm', false, longstring + " This string tests my wrapping");
-	parser.addarglist("hare",'h',true,"I test vector input");
-	parser.parse("./go-again -l -r 334 -h 1 2 3 4 5");
-	assert(parser.getarg<int>("rofl") == 334);
-	assert(parser.getarg<bool>("lol") == true);
-	assert(parser.getarg<string>("mao") == "TseTong");
+	using namespace std;
+
+	OP::OptParser parser("OptParser_test.cpp");
+
+	parser.addOpt<bool>("lol", false, 'l', true, "I am here to test you ");
+	parser.addOpt<int>("rofl", 25, 'r', true, "I am here to test you as well");
+	parser.addOpt<bool>("mao", true, 'm', false,
+			longstring + " This string tests my wrapping");
+	parser.addOptList("hare", 'h', true, "I test vector input");
+
+	parser.parse("./go-again -lm --rofl 334 -h 1 2 3 4 5");
+
+	assert(parser.getOpt<int>("rofl") == 334);
+	assert(parser.getOpt<bool>("lol") == true);
+	assert(parser.getOpt<bool>("mao") == false);
+
 	cout << "Expect: \"1 2 3 4 5\"\n";
-	printStrVec(parser.getarglist("hare"));
+	OP::printVec(parser.getOptList("hare"), ' ');
+
 	parser.help();
 
 Output:
 
 	Expect: "1 2 3 4 5"
-	1
-	2
-	3
-	4
-	5
-	Usage:	./ArgumentParser_test.cpp [--hare HARE] [--lol ] [--mao ] [--rofl ROFL] 
+	1 2 3 4 5 
+	Usage:	./OptParser_test.cpp [--hare HARE... ] [--lol ] [--mao ] [--rofl ROFL] 
 	Options:
-
+	
 	--hare (-h)	Required: Yes	Type: VECTOR
 		I test vector input
 	
@@ -72,4 +76,3 @@ Output:
 	
 	--rofl (-r)	Required: Yes	Type: INT
 		I am here to test you as well
-
