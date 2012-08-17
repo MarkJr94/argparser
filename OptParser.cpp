@@ -5,7 +5,7 @@
  *      Author: markjr
  */
 
-#include "ArgumentParser.hpp"
+#include "OptParser.hpp"
 
 #include <cctype>
 #include <cstdlib>
@@ -16,9 +16,9 @@
 
 /* namespace AP functions ================================================== */
 
-using namespace AP;
+using namespace OP;
 
-std::vector<std::string> AP::split(const std::string& str,
+std::vector<std::string> OP::split(const std::string& str,
 		const char separator) {
 	using namespace std;
 
@@ -41,7 +41,7 @@ std::vector<std::string> AP::split(const std::string& str,
 	return ret;
 }
 
-float AP::saferFloat(const std::string & ss) {
+float OP::saferFloat(const std::string & ss) {
 	using namespace std;
 
 	float d1;
@@ -50,22 +50,22 @@ float AP::saferFloat(const std::string & ss) {
 	string validChars = "0123456789-.e";
 	/* Check for valid characters */
 	if ((pos = ss.find_first_not_of(validChars)) != string::npos) {
-		throw(ArgParseExcept("Invalid character in double input"));
+		throw(OptParseExcept("Invalid character in double input"));
 	}
 
 	/* Check decimal */
 	if ((decPos = ss.find_first_of('.') != ss.find_last_of('.'))) {
-		throw(ArgParseExcept("Too many decimals"));
+		throw(OptParseExcept("Too many decimals"));
 	}
 
 	/* Check for exponentiation */
 	if ((ePos = ss.find_first_of("eE")) != string::npos) {
 		if (ePos != ss.find_last_of("eE")) {
-			throw(ArgParseExcept("Too many 'e's"));
+			throw(OptParseExcept("Too many 'e's"));
 		}
 
 		if (ePos < decPos) {
-			throw(ArgParseExcept("Invalid placement of exponentiation"));
+			throw(OptParseExcept("Invalid placement of exponentiation"));
 		}
 	}
 
@@ -74,24 +74,24 @@ float AP::saferFloat(const std::string & ss) {
 	if ((minPos = ss.find_first_of('-')) != string::npos) {
 		if (minPos != (rminPos = ss.find_last_of('-'))) {
 			if (rminPos != ePos + 1)
-				throw ArgParseExcept("Too many '-'s");
+				throw OptParseExcept("Too many '-'s");
 		}
 
 		if (minPos > ss.find_first_not_of(" \t\n\r", 0)) {
-			throw ArgParseExcept("Incorrect placement of '-'");
+			throw OptParseExcept("Incorrect placement of '-'");
 		}
 	}
 
 	stringstream sss(ss);
 	sss >> d1;
 	if (sss.fail()) {
-		throw ArgParseExcept("float input failed");
+		throw OptParseExcept("float input failed");
 	}
 
 	return d1;
 }
 
-bool AP::isFlag(const std::string& s) {
+bool OP::isFlag(const std::string& s) {
 	if (s.empty())
 		return false;
 	if (s[0] == '-')
@@ -101,7 +101,7 @@ bool AP::isFlag(const std::string& s) {
 	return false;
 }
 
-bool AP::isLongFlag(const std::string& s) {
+bool OP::isLongFlag(const std::string& s) {
 	if (s.empty())
 		return false;
 	if (s.size() > 2)
@@ -110,7 +110,7 @@ bool AP::isLongFlag(const std::string& s) {
 	return false;
 }
 
-std::vector<std::string> AP::separateFlags(std::vector<std::string>& sVec) {
+std::vector<std::string> OP::separateFlags(std::vector<std::string>& sVec) {
 	using namespace std;
 
 	vector<string> ret;
@@ -137,50 +137,50 @@ std::vector<std::string> AP::separateFlags(std::vector<std::string>& sVec) {
 
 /* ========== Argument parser definitions ========= */
 
-ArgumentParser::ArgumentParser(const std::string& _name) :
+OptParser::OptParser(const std::string& _name) :
 		done(false), argv(""), name(_name) {
 }
 
-ArgumentParser::~ArgumentParser() {
+OptParser::~OptParser() {
 }
 
 template<>
-void ArgumentParser::addarg<int>(const std::string& name, const int def,
+void OptParser::addOpt<int>(const std::string& name, const int def,
 		const char flag, const bool required, const std::string& help) {
-	infoMap[name] = {0, false, required, flag, help, AP::INT};
+	infoMap[name] = {0, false, required, flag, help, OP::OptType::INT};
 	intMap[name] = def;
 }
 
 template<>
-void ArgumentParser::addarg<bool>(const std::string& name, const bool def,
+void OptParser::addOpt<bool>(const std::string& name, const bool def,
 		const char flag, const bool required, const std::string& help) {
-	infoMap[name] = {0, false, required, flag, help, AP::BOOL};
+	infoMap[name] = {0, false, required, flag, help, OP::OptType::BOOL};
 	boolMap[name] = def;
 }
 
 template<>
-void ArgumentParser::addarg<float>(const std::string& name, const float def,
+void OptParser::addOpt<float>(const std::string& name, const float def,
 		const char flag, const bool required, const std::string& help) {
-	infoMap[name] = {0, false, required, flag, help, AP::FLOAT};
+	infoMap[name] = {0, false, required, flag, help, OP::OptType::FLOAT};
 	floatMap[name] = def;
 }
 
 template<>
-void ArgumentParser::addarg<std::string>(const std::string& name,
+void OptParser::addOpt<std::string>(const std::string& name,
 		const std::string def, const char flag, const bool required,
 		const std::string& help) {
-	infoMap[name] = {0, false, required, flag, help, AP::STRING};
+	infoMap[name] = {0, false, required, flag, help, OP::OptType::STRING};
 	stringMap[name] = def;
 }
 
-void ArgumentParser::addarglist(const std::string& name, const char flag,
+void OptParser::addOptList(const std::string& name, const char flag,
 		const bool required, const std::string& help) {
-	using namespace AP;
+	using namespace OP;
 
-	infoMap[name] = {0, false, required, flag, help, VSTRING};
+	infoMap[name] = {0, false, required, flag, help, OP::OptType::VSTRING};
 }
 
-std::vector<std::string> ArgumentParser::getarglist(
+std::vector<std::string> OptParser::getOptList(
 		const std::string& name) const {
 	using namespace std;
 
@@ -188,72 +188,72 @@ std::vector<std::string> ArgumentParser::getarglist(
 	if ((it = vecMap.find(name)) == vecMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
 		help();
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
 
 template<>
-bool ArgumentParser::getarg<bool>(const std::string& name) const {
+bool OptParser::getOpt<bool>(const std::string& name) const {
 	using namespace std;
 
 	map<string, bool>::const_iterator it = boolMap.begin();
 	if ((it = boolMap.find(name)) == boolMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
 		help();
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
 
 template<>
-int ArgumentParser::getarg<int>(const std::string& name) const {
+int OptParser::getOpt<int>(const std::string& name) const {
 	using namespace std;
 
 	map<string, int>::const_iterator it;
 	if ((it = intMap.find(name)) == intMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
 		help();
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
 
 template<>
-float ArgumentParser::getarg<float>(const std::string& name) const {
+float OptParser::getOpt<float>(const std::string& name) const {
 	using namespace std;
 
 	map<string, float>::const_iterator it;
 	if ((it = floatMap.find(name)) == floatMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
 		help();
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
 
 template<>
-std::string ArgumentParser::getarg<std::string>(const std::string& name) const {
+std::string OptParser::getOpt<std::string>(const std::string& name) const {
 	using namespace std;
 
 	map<string, string>::const_iterator it;
 	if ((it = stringMap.find(name)) == stringMap.end()) {
 		string errstr = "Non-existent argument \"" + name + "\" requested";
 		help();
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	}
 
 	return it->second;
 }
 
-std::map<std::string, AP::ArgInfo>::const_iterator ArgumentParser::matchArg(
+std::map<std::string, OP::OptInfo>::const_iterator OptParser::matchArg(
 		const std::string& opt, const bool isFlag) const {
 	using namespace std;
-	typedef map<string, AP::ArgInfo>::const_iterator constit;
+	typedef map<string, OP::OptInfo>::const_iterator constit;
 
 	string errstr;
 	if (isFlag) {
@@ -264,7 +264,7 @@ std::map<std::string, AP::ArgInfo>::const_iterator ArgumentParser::matchArg(
 			}
 		}
 		errstr = "Invalid short flag argument " + opt + " given";
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	} else {
 		string base = opt.substr(2);
 		for (constit it = infoMap.begin(); it != infoMap.end(); it++) {
@@ -273,15 +273,15 @@ std::map<std::string, AP::ArgInfo>::const_iterator ArgumentParser::matchArg(
 			}
 		}
 		errstr = "Invalid long flag argument " + opt + " given";
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	}
 
 }
 
-std::map<std::string, AP::ArgInfo>::iterator ArgumentParser::matchArg(
+std::map<std::string, OP::OptInfo>::iterator OptParser::matchArg(
 		const std::string& opt, const bool isFlag) {
 	using namespace std;
-	typedef map<string, AP::ArgInfo>::iterator mapit;
+	typedef map<string, OP::OptInfo>::iterator mapit;
 
 	string errstr;
 	if (isFlag) {
@@ -292,7 +292,7 @@ std::map<std::string, AP::ArgInfo>::iterator ArgumentParser::matchArg(
 			}
 		}
 		errstr = "Invalid short  flag argument " + opt + " given";
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	} else {
 		string base = opt.substr(2);
 		for (mapit it = infoMap.begin(); it != infoMap.end(); it++) {
@@ -301,14 +301,14 @@ std::map<std::string, AP::ArgInfo>::iterator ArgumentParser::matchArg(
 			}
 		}
 		errstr = "Invalid long flag argument " + opt + " given";
-		throw(AP::ArgParseExcept(errstr.c_str()));
+		throw(OP::OptParseExcept(errstr.c_str()));
 	}
 
 }
 
-unsigned ArgumentParser::parse(const int argc, char * _argv[]) {
+unsigned OptParser::parse(const int argc, char * _argv[]) {
 	using namespace std;
-	using namespace AP;
+	using namespace OP;
 
 	if (infoMap.empty() || done)
 		return 0;
@@ -321,9 +321,9 @@ unsigned ArgumentParser::parse(const int argc, char * _argv[]) {
 	return parse(argv);
 }
 
-unsigned ArgumentParser::parse(const std::string& _argv) {
+unsigned OptParser::parse(const std::string& _argv) {
 	using namespace std;
-	using namespace AP;
+	using namespace OP;
 
 	if (infoMap.empty() || done)
 		return 0;
@@ -338,7 +338,7 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 	string prevVec;
 	unsigned total = 0;
 
-	map<string, ArgInfo>::iterator mapit;
+	map<string, OptInfo>::iterator mapit;
 	for (auto it = argvec.begin(); it != argvec.end(); it++) {
 		if (isFlag(*it)) {
 			mapit = matchArg(*it, true);
@@ -353,17 +353,17 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 		} else
 			continue;
 
-		AP::ArgInfo& info = mapit->second;
+		OP::OptInfo& info = mapit->second;
 		string name = mapit->first;
 		info.found = true;
 
 		stringstream possible;
 		string p;
 		auto next = it + 1;
-		if (next == argvec.end() && info.type != BOOL) {
+		if (next == argvec.end() && info.type != OptType::BOOL) {
 			errstr = "Option not given for argument\"" + name + "\"";
 			help();
-			throw(ArgParseExcept(errstr.c_str()));
+			throw(OptParseExcept(errstr.c_str()));
 		}
 
 		float f;
@@ -371,27 +371,27 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 		string s;
 
 		switch (info.type) {
-		case INT:
+		case OptType::INT:
 			possible << *next;
 			possible >> i;
 			intMap[name] = i;
 			++total;
 			break;
-		case FLOAT:
+		case OptType::FLOAT:
 			p = *next;
 			f = saferFloat(p);
 			floatMap[name] = f;
 			++total;
 			break;
-		case STRING:
+		case OptType::STRING:
 			stringMap[name] = *next;
 			++total;
 			break;
-		case BOOL:
+		case OptType::BOOL:
 			boolMap[name] = !boolMap[name];
 			++total;
 			break;
-		case VSTRING:
+		case OptType::VSTRING:
 			prevVec = name;
 			addToVec = true;
 			break;
@@ -403,7 +403,7 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 	return total;
 }
 
-void ArgumentParser::clear() {
+void OptParser::clear() {
 	done = false;
 	infoMap.clear();
 	intMap.clear();
@@ -413,16 +413,16 @@ void ArgumentParser::clear() {
 }
 
 #define opreq( x ) ( x ? "Yes" : "No")
-#define ops( x ) ( x == BOOL ? "" : ( x == VSTRING ? upname+"... " : upname) )
+#define ops( x ) ( x == OptType::BOOL ? "" : ( x == OptType::VSTRING ? upname+"... " : upname) )
 
-void ArgumentParser::help() const {
+void OptParser::help() const {
 	using namespace std;
-	using namespace AP;
+	using namespace OP;
 
 	cout << "Usage:\t./" << name << " ";
 
 	for (auto it = infoMap.begin(); it != infoMap.end(); it++) {
-		const ArgInfo info = it->second;
+		const OptInfo info = it->second;
 		string upname = it->first;
 		for (char& c : upname)
 			c = toupper(c);
@@ -434,7 +434,7 @@ void ArgumentParser::help() const {
 
 	cout << "Options:\n\n";
 	for (auto it = infoMap.begin(); it != infoMap.end(); it++) {
-		const ArgInfo info = it->second;
+		const OptInfo info = it->second;
 		string upname = it->first;
 		for (char& c : upname)
 			c = toupper(c);
@@ -445,16 +445,16 @@ void ArgumentParser::help() const {
 		cout << "\tType: ";
 
 		switch (info.type) {
-		case INT:
+		case OptType::INT:
 			cout << "INT\n";
 			break;
-		case FLOAT:
+		case OptType::FLOAT:
 			cout << "FLOAT\n";
 			break;
-		case BOOL:
+		case OptType::BOOL:
 			cout << "BOOL\n";
 			break;
-		case STRING:
+		case OptType::STRING:
 			cout << "STRING\n";
 			break;
 		default:

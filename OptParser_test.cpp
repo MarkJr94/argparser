@@ -5,7 +5,7 @@
  *      Author: markjr
  */
 
-#include "ArgumentParser.hpp"
+#include "OptParser.hpp"
 #include <iostream>
 #include <cassert>
 
@@ -18,40 +18,40 @@ std::string longstring =
 void test_parser(int argc, char *argv[]) {
 	using namespace std;
 
-	AP::ArgumentParser parser("ArgumentParser_test.cpp");
+	OP::OptParser parser("OptParser_test.cpp");
 
-	parser.addarg<float>("length", 20, 'l', true);
-	parser.addarg<int>("height", 20, 'h', true);
-	parser.addarg<string>("name", "Kinsman", 'n', true);
+	parser.addOpt<float>("length", 20, 'l', true);
+	parser.addOpt<int>("height", 20, 'h', true);
+	parser.addOpt<string>("name", "Kinsman", 'n', true);
 
 	parser.parse("./go -l  -6001.45e-2 -h 45 -n Joe");
 
-	assert(parser.getarg<string>("name") == "Joe");
-	assert(parser.getarg<float>("length") - -6001.45e-2 < .0001);
-	assert(parser.getarg<int>("height") == 45);
+	assert(parser.getOpt<string>("name") == "Joe");
+	assert(parser.getOpt<float>("length") - -6001.45e-2 < .0001);
+	assert(parser.getOpt<int>("height") == 45);
 
 	try {
-		bool b = parser.getarg<bool>("lol");
-	} catch (AP::ArgParseExcept& e) {
+		bool b = parser.getOpt<bool>("lol");
+	} catch (OP::OptParseExcept& e) {
 		cout << "Exception successfully thrown\n";
 	}
 
 	parser.clear();
 
-	parser.addarg<bool>("lol", false, 'l', true, "I am here to test you ");
-	parser.addarg<int>("rofl", 25, 'r', true, "I am here to test you as well");
-	parser.addarg<bool>("mao", true, 'm', false,
+	parser.addOpt<bool>("lol", false, 'l', true, "I am here to test you ");
+	parser.addOpt<int>("rofl", 25, 'r', true, "I am here to test you as well");
+	parser.addOpt<bool>("mao", true, 'm', false,
 			longstring + " This string tests my wrapping");
-	parser.addarglist("hare", 'h', true, "I test vector input");
+	parser.addOptList("hare", 'h', true, "I test vector input");
 
 	parser.parse("./go-again -lm --rofl 334 -h 1 2 3 4 5");
 
-	assert(parser.getarg<int>("rofl") == 334);
-	assert(parser.getarg<bool>("lol") == true);
-	assert(parser.getarg<bool>("mao") == false);
+	assert(parser.getOpt<int>("rofl") == 334);
+	assert(parser.getOpt<bool>("lol") == true);
+	assert(parser.getOpt<bool>("mao") == false);
 
 	cout << "Expect: \"1 2 3 4 5\"\n";
-	AP::printVec(parser.getarglist("hare"), ' ');
+	OP::printVec(parser.getOptList("hare"), ' ');
 
 	parser.help();
 

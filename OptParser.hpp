@@ -5,8 +5,8 @@
  *      Author: markjr
  */
 
-#ifndef ARGUMENTPARSER_HPP_
-#define ARGUMENTPARSER_HPP_
+#ifndef OPTPARSER_HPP_
+#define OPTPARSER_HPP_
 
 #include <exception>
 #include <iostream>
@@ -15,8 +15,8 @@
 #include <string>
 #include <vector>
 
-namespace AP {
-typedef enum ArgumentType {
+namespace OP {
+typedef enum OptType {
 	INT, BOOL, FLOAT, STRING, VSTRING
 } Type;
 
@@ -56,11 +56,11 @@ bool isLongFlag(const std::string& s);
 std::vector<std::string> separateFlags(std::vector<std::string>&);
 
 /* Custom exception class for argument parser */
-struct ArgParseExcept: public std::exception {
-	ArgParseExcept(const char * _msg) :
+struct OptParseExcept: public std::exception {
+	OptParseExcept(const char * _msg) :
 			msg(_msg) {
 	}
-	~ArgParseExcept() {
+	~OptParseExcept() {
 	}
 	const char * what() const throw () {
 		return msg;
@@ -72,13 +72,13 @@ private:
 /* simple struct
  * to store info on an arg
  */
-struct ArgInfo {
+struct OptInfo {
 	unsigned short count;
 	bool found;
 	bool required;
 	char flag;
 	std::string help;
-	AP::Type type;
+	OP::Type type;
 };
 
 /*
@@ -101,13 +101,13 @@ struct ArgInfo {
  * You can specify if any option is required or not, as well as default values for all
  * 	but the string list option types.
  */
-class ArgumentParser {
+class OptParser {
 public:
 
 	/* Constructor sets name displayed as program name in help string
 	 */
-	ArgumentParser(const std::string& name = "program");
-	~ArgumentParser();
+	OptParser(const std::string& name = "program");
+	~OptParser();
 
 	/* Once parsing had been done, you have to
 	 * call this function if you want to add new arguments
@@ -117,19 +117,19 @@ public:
 
 	/* Function to add arguments */
 	template<typename T>
-	void addarg(const std::string& name, const T def, const char flag,
+	void addOpt(const std::string& name, const T def, const char flag,
 			const bool required = false, const std::string& help = "");
 
 	/* Function to add argument vector */
-	void addarglist(const std::string& name, const char flag,
+	void addOptList(const std::string& name, const char flag,
 			const bool required = false, const std::string& help = "");
 
 	/* Function to return arguments of various types */
 	template<typename T>
-	T getarg(const std::string&) const;
+	T getOpt(const std::string&) const;
 
 	/* Function to return argument vector */
-	std::vector<std::string> getarglist(const std::string&) const;
+	std::vector<std::string> getOptList(const std::string&) const;
 
 	/* Can parse argc and argv or  a string */
 	unsigned parse(const int argc, char *argv[]);
@@ -151,7 +151,7 @@ public:
 	void help() const;
 
 private:
-	std::map<std::string, ArgInfo> infoMap;
+	std::map<std::string, OptInfo> infoMap;
 	std::map<std::string, int> intMap;
 	std::map<std::string, bool> boolMap;
 	std::map<std::string, float> floatMap;
@@ -163,22 +163,22 @@ private:
 	std::string argv;
 	std::string name;
 
-	std::map<std::string, ArgInfo>::const_iterator matchArg(const std::string&,
+	std::map<std::string, OptInfo>::const_iterator matchArg(const std::string&,
 			const bool) const;
-	std::map<std::string, ArgInfo>::iterator matchArg(const std::string&,
+	std::map<std::string, OptInfo>::iterator matchArg(const std::string&,
 			const bool);
 };
 }
 
 template<typename T>
-void AP::printVec(const std::vector<T>& vec, const char separator) {
+void OP::printVec(const std::vector<T>& vec, const char separator) {
 	for (auto &elem : vec)
 		std::cout << elem << separator;
 	std::cout << '\n';
 }
 
 template<typename T>
-typename std::vector<T>::iterator AP::find(const T& elem, std::vector<T>& vec) {
+typename std::vector<T>::iterator OP::find(const T& elem, std::vector<T>& vec) {
 	typename std::vector<T>::iterator it;
 	for (it = vec.begin(); it != vec.end(); it++) {
 		if (*it == elem)
@@ -188,7 +188,7 @@ typename std::vector<T>::iterator AP::find(const T& elem, std::vector<T>& vec) {
 }
 
 template<typename T>
-typename std::vector<T>::const_iterator AP::find(const T& elem, const std::vector<T>& vec) {
+typename std::vector<T>::const_iterator OP::find(const T& elem, const std::vector<T>& vec) {
 	typename std::vector<T>::const_iterator it;
 	for (it = vec.begin(); it != vec.end(); it++) {
 		if (*it == elem)
@@ -196,4 +196,4 @@ typename std::vector<T>::const_iterator AP::find(const T& elem, const std::vecto
 	}
 	return it;
 }
-#endif /* ARGUMENTPARSER_HPP_ */
+#endif /* OPTPARSER_HPP_ */
