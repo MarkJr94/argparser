@@ -18,10 +18,8 @@
 
 using namespace AP;
 
-/* Takes a std::string and splits it by whitespaces
- * into a vector of strings
- */
-std::vector<std::string> AP::split(const std::string& str, const char separator) {
+std::vector<std::string> AP::split(const std::string& str,
+		const char separator) {
 	using namespace std;
 
 	vector<string> ret;
@@ -30,21 +28,19 @@ std::vector<std::string> AP::split(const std::string& str, const char separator)
 	string::const_iterator back;
 	string::const_iterator end = str.end();
 
-	while (front !=  end && back != end) {
-		while (*front == separator && front !=  str.end())
+	while (front != end && back != end) {
+		while (*front == separator && front != str.end())
 			front++;
 		back = front;
-		while (*back != separator && back !=  end)
+		while (*back != separator && back != end)
 			back++;
-		if  (back > front)
+		if (back > front)
 			ret.push_back(str.substr(front - str.begin(), back - front));
 		front = back;
 	}
 	return ret;
 }
 
-/* Attempt to make float input a bit safer
- */
 float AP::saferFloat(const std::string & ss) {
 	using namespace std;
 
@@ -95,6 +91,50 @@ float AP::saferFloat(const std::string & ss) {
 	return d1;
 }
 
+bool AP::isFlag(const std::string& s) {
+	if (s.empty())
+		return false;
+	if (s[0] == '-')
+		if (s.size() >= 2)
+			if (!isdigit(s[1]) && s[1] != '-')
+				return true;
+	return false;
+}
+
+bool AP::isLongFlag(const std::string& s) {
+	if (s.empty())
+		return false;
+	if (s.size() > 2)
+		if (s[0] == '-' && s[1] == '-')
+			return true;
+	return false;
+}
+
+std::vector<std::string> AP::separateFlags(std::vector<std::string>& sVec) {
+	using namespace std;
+
+	vector<string> ret;
+
+	for (vector<string>::iterator it = sVec.begin(); it != sVec.end(); it++) {
+		if (isFlag(*it)) {
+			if (it->size() > 2) {
+				ret.push_back(it->substr(0, 2));
+				string rest = it->substr(2);
+				for (auto c : rest) {
+					string s = "-";
+					s += c;
+					ret.push_back(s);
+				}
+			} else
+				ret.push_back(*it);
+		} else {
+			ret.push_back(*it);
+		}
+	}
+
+	return ret;
+}
+
 /* ========== Argument parser definitions ========= */
 
 ArgumentParser::ArgumentParser(const std::string& _name) :
@@ -133,15 +173,15 @@ void ArgumentParser::addarg<std::string>(const std::string& name,
 	stringMap[name] = def;
 }
 
-void ArgumentParser::addarglist(const std::string& name,const char flag,
+void ArgumentParser::addarglist(const std::string& name, const char flag,
 		const bool required, const std::string& help) {
 	using namespace AP;
 
 	infoMap[name] = {0, false, required, flag, help, VSTRING};
 }
 
-
-std::vector<std::string> ArgumentParser::getarglist(const std::string& name) const {
+std::vector<std::string> ArgumentParser::getarglist(
+		const std::string& name) const {
 	using namespace std;
 
 	map<string, vector<string> >::const_iterator it;
@@ -210,6 +250,62 @@ std::string ArgumentParser::getarg<std::string>(const std::string& name) const {
 	return it->second;
 }
 
+std::map<std::string, AP::ArgInfo>::const_iterator ArgumentParser::matchArg(
+		const std::string& opt, const bool isFlag) const {
+	using namespace std;
+	typedef map<string, AP::ArgInfo>::const_iterator constit;
+
+	string errstr;
+	if (isFlag) {
+		char flag = opt[1];
+		for (constit it = infoMap.begin(); it != infoMap.end(); it++) {
+			if (flag == it->second.flag) {
+				return it;
+			}
+		}
+		errstr = "Invalid short flag argument " + opt + " given";
+		throw(AP::ArgParseExcept(errstr.c_str()));
+	} else {
+		string base = opt.substr(2);
+		for (constit it = infoMap.begin(); it != infoMap.end(); it++) {
+			if (base == it->first) {
+				return it;
+			}
+		}
+		errstr = "Invalid long flag argument " + opt + " given";
+		throw(AP::ArgParseExcept(errstr.c_str()));
+	}
+
+}
+
+std::map<std::string, AP::ArgInfo>::iterator ArgumentParser::matchArg(
+		const std::string& opt, const bool isFlag) {
+	using namespace std;
+	typedef map<string, AP::ArgInfo>::iterator mapit;
+
+	string errstr;
+	if (isFlag) {
+		char flag = opt[1];
+		for (mapit it = infoMap.begin(); it != infoMap.end(); it++) {
+			if (flag == it->second.flag) {
+				return it;
+			}
+		}
+		errstr = "Invalid short  flag argument " + opt + " given";
+		throw(AP::ArgParseExcept(errstr.c_str()));
+	} else {
+		string base = opt.substr(2);
+		for (mapit it = infoMap.begin(); it != infoMap.end(); it++) {
+			if (base == it->first) {
+				return it;
+			}
+		}
+		errstr = "Invalid long flag argument " + opt + " given";
+		throw(AP::ArgParseExcept(errstr.c_str()));
+	}
+
+}
+
 unsigned ArgumentParser::parse(const int argc, char * _argv[]) {
 	using namespace std;
 	using namespace AP;
@@ -233,90 +329,74 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 		return 0;
 
 	argv = _argv;
-	sortedArgvVector.clear();
 
 	vector<string> argvec = split(argv);
+	argvec = separateFlags(argvec);
 	string errstr;
 
+	bool addToVec = false;
+	string prevVec;
 	unsigned total = 0;
 
-	for (auto it = infoMap.begin(); it != infoMap.end(); it++) {
-		string name = it->first;
-		ArgInfo& info = it->second;
+	map<string, ArgInfo>::iterator mapit;
+	for (auto it = argvec.begin(); it != argvec.end(); it++) {
+		if (isFlag(*it)) {
+			mapit = matchArg(*it, true);
+			addToVec = false;
+		} else if (isLongFlag(*it)) {
+			mapit = matchArg(*it, false);
+			addToVec = false;
+		} else if (addToVec) {
+			++total;
+			vecMap[prevVec].push_back(*it);
+			continue;
+		} else
+			continue;
 
-		string fullflag = "-";
-		fullflag += info.flag;
-		string fullname = "--" + name;
-		vector<string>::iterator r1 = find(fullname, argvec);
-		vector<string>::iterator r2 = find(fullflag, argvec);
-		if (r1 == argvec.end() && r2 == argvec.end()) {
-			if (info.required) {
-				errstr = "Required arg \"" + name + "\" not found";
-				help();
-				throw(ArgParseExcept(errstr.c_str()));
-			} else {
-				continue;
-			}
+		AP::ArgInfo& info = mapit->second;
+		string name = mapit->first;
+		info.found = true;
+
+		stringstream possible;
+		string p;
+		auto next = it + 1;
+		if (next == argvec.end() && info.type != BOOL) {
+			errstr = "Option not given for argument\"" + name + "\"";
+			help();
+			throw(ArgParseExcept(errstr.c_str()));
 		}
-
-		vector<string>::iterator first;
-		if (r1 != argvec.end() && r2 != argvec.end())
-			first = (r1 < r2 ? r1 : r2);
-		else
-			first = (r1 != argvec.end() ? r1 : r2);
 
 		float f;
 		int i;
 		string s;
-
-		stringstream possible;
-		string p;
-		if ( (first +1) == argvec.end() && info.type != BOOL) {
-			errstr = "Option not given for argument\"" + name+"\"";
-			help();
-			throw(ArgParseExcept(errstr.c_str()));
-		}
-		vector<string>::iterator next = first + 1;
 
 		switch (info.type) {
 		case INT:
 			possible << *next;
 			possible >> i;
 			intMap[name] = i;
+			++total;
 			break;
 		case FLOAT:
 			p = *next;
 			f = saferFloat(p);
 			floatMap[name] = f;
+			++total;
 			break;
 		case STRING:
 			stringMap[name] = *next;
+			++total;
 			break;
 		case BOOL:
 			boolMap[name] = !boolMap[name];
+			++total;
 			break;
 		case VSTRING:
-			for (p = *next; next != argvec.end(); next++) {
-				p = *next;
-				if (p[0] == '-')
-					if (p.size() == 2)
-						if (!isdigit(p[1]))
-							break;
-				vecMap[name].push_back(p);
-			}
+			prevVec = name;
+			addToVec = true;
 			break;
 		}
 
-		if (possible.fail()) {
-			errstr = "Invalid argument \"" + p + "\" specified for option: \"";
-			errstr += name + "\"";
-			help();
-			throw(ArgParseExcept(errstr.c_str()));
-		}
-
-		sortedArgvVector.push_back(name);
-		sortedArgvVector.push_back(p);
-		total++;
 	}
 
 	done = true;
@@ -325,7 +405,6 @@ unsigned ArgumentParser::parse(const std::string& _argv) {
 
 void ArgumentParser::clear() {
 	done = false;
-	sortedArgvVector.clear();
 	infoMap.clear();
 	intMap.clear();
 	boolMap.clear();
@@ -334,6 +413,7 @@ void ArgumentParser::clear() {
 }
 
 #define opreq( x ) ( x ? "Yes" : "No")
+#define ops( x ) ( x == BOOL ? "" : ( x == VSTRING ? upname+"... " : upname) )
 
 void ArgumentParser::help() const {
 	using namespace std;
@@ -347,8 +427,8 @@ void ArgumentParser::help() const {
 		for (char& c : upname)
 			c = toupper(c);
 
-		cout << "[--" << it->first << " " << (info.type == BOOL ? "" : upname)
-				<< "] ";
+		cout << "[--" << it->first << " " << ops(info.type)
+		<< "] ";
 	}
 	cout << endl;
 

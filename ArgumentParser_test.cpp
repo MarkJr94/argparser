@@ -11,9 +11,9 @@
 
 std::string longstring =
 		"Unlike traditional c-strings, which are mere sequences of characters in a memory array,"
-		" C++ string objects belong to a class with many built-in features to operate with"
-		" strings in a more intuitive way and with some additional useful features common " ""
-		"to C++ containers.";
+				" C++ string objects belong to a class with many built-in features to operate with"
+				" strings in a more intuitive way and with some additional useful features common "
+				"to C++ containers.";
 
 void test_parser(int argc, char *argv[]) {
 	using namespace std;
@@ -40,17 +40,18 @@ void test_parser(int argc, char *argv[]) {
 
 	parser.addarg<bool>("lol", false, 'l', true, "I am here to test you ");
 	parser.addarg<int>("rofl", 25, 'r', true, "I am here to test you as well");
-	parser.addarg<bool>("mao", true, 'm', false, longstring + " This string tests my wrapping");
-	parser.addarglist("hare",'h',true,"I test vector input");
+	parser.addarg<bool>("mao", true, 'm', false,
+			longstring + " This string tests my wrapping");
+	parser.addarglist("hare", 'h', true, "I test vector input");
 
-	parser.parse("./go-again -l -r 334 -h 1 2 3 4 5");
+	parser.parse("./go-again -lm --rofl 334 -h 1 2 3 4 5");
 
 	assert(parser.getarg<int>("rofl") == 334);
 	assert(parser.getarg<bool>("lol") == true);
-	assert(parser.getarg<bool>("mao") == true);
+	assert(parser.getarg<bool>("mao") == false);
 
 	cout << "Expect: \"1 2 3 4 5\"\n";
-	AP::printVec(parser.getarglist("hare"),' ');
+	AP::printVec(parser.getarglist("hare"), ' ');
 
 	parser.help();
 
