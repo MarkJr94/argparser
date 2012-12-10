@@ -20,40 +20,20 @@ void test_parser(int argc, char *argv[]) {
 
 	OP::OptParser parser("OptParser_test.cpp");
 
-	parser.addOpt<float>("length", 20, 'l', true);
-	parser.addOpt<int>("height", 20, 'h', true);
-	parser.addOpt<string>("name", "Kinsman", 'n', true);
-
-	parser.parse("./go -l  -6001.45e-2 -h 45 -n Joe");
-
-	assert(parser.getOpt<string>("name") == "Joe");
-	assert(parser.getOpt<float>("length") - -6001.45e-2 < .0001);
-	assert(parser.getOpt<int>("height") == 45);
-
-	try {
-		bool b = parser.getOpt<bool>("lol");
-	} catch (OP::OptParseExcept& e) {
-		cout << "Exception successfully thrown\n";
-	}
-
-	parser.clear();
-
-	parser.addOpt<bool>("lol", false, 'l', true, "I am here to test you ");
-	parser.addOpt<int>("rofl", 25, 'r', true, "I am here to test you as well");
-	parser.addOpt<bool>("mao", true, 'm', false,
+	parser.add_opt(OP::FLOAT,"length", "20", 'l', true);
+	parser.add_opt(OP::INT,"height", "20", 'h', true);
+	parser.add_opt(OP::STRING,"name", "Kinsman", 'n', true);
+	parser.add_opt(OP::BOOL,"mao", "false", 'm', false,
 			longstring + " This string tests my wrapping");
-	parser.addOptList("hare", 'h', true, "I test vector input");
 
-	parser.parse("./go-again -lm --rofl 334 -h 1 2 3 4 5");
-
-	assert(parser.getOpt<int>("rofl") == 334);
-	assert(parser.getOpt<bool>("lol") == true);
-	assert(parser.getOpt<bool>("mao") == false);
-
-	cout << "Expect: \"1 2 3 4 5\"\n";
-	OP::printVec(parser.getOptList("hare"), ' ');
-
+	string test_1 = "./go -l  -6001.45e-2 -h 45 -n Joe -mmmm";
+	parser.parse(test_1);
+	cout << "Parsed string [" << test_1 << "]\n";
+	parser.print();
 	parser.help();
+
+	std::vector<int> v;
+	OP::print_series(v.begin(),v.end());
 
 	cout << "Parser testing successful!\n";
 }

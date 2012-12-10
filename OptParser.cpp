@@ -7,6 +7,7 @@
 
 #include "OptParser.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <exception>
@@ -14,12 +15,12 @@
 #include <stdexcept>
 #include <sstream>
 
-/* namespace AP functions ================================================== */
+/* namespace OP functions ================================================== */
 
 using namespace OP;
 
-std::vector<std::string> OP::split(const std::string& str,
-		const char separator) {
+std::vector<std::string> OP::split(const std::string& str, const char separator)
+{
 	using namespace std;
 
 	vector<string> ret;
@@ -41,7 +42,8 @@ std::vector<std::string> OP::split(const std::string& str,
 	return ret;
 }
 
-float OP::saferFloat(const std::string & ss) {
+float OP::safer_float(const std::string & ss)
+{
 	using namespace std;
 
 	float d1;
@@ -91,7 +93,8 @@ float OP::saferFloat(const std::string & ss) {
 	return d1;
 }
 
-bool OP::isFlag(const std::string& s) {
+bool OP::is_flag(const std::string& s)
+{
 	if (s.empty())
 		return false;
 	if (s[0] == '-')
@@ -101,7 +104,8 @@ bool OP::isFlag(const std::string& s) {
 	return false;
 }
 
-bool OP::isLongFlag(const std::string& s) {
+bool OP::is_long_flag(const std::string& s)
+{
 	if (s.empty())
 		return false;
 	if (s.size() > 2)
@@ -110,13 +114,14 @@ bool OP::isLongFlag(const std::string& s) {
 	return false;
 }
 
-std::vector<std::string> OP::separateFlags(std::vector<std::string>& sVec) {
+std::vector<std::string> OP::separate_flags(std::vector<std::string>& sVec)
+{
 	using namespace std;
 
 	vector<string> ret;
 
 	for (vector<string>::iterator it = sVec.begin(); it != sVec.end(); it++) {
-		if (isFlag(*it)) {
+		if (is_flag(*it)) {
 			if (it->size() > 2) {
 				ret.push_back(it->substr(0, 2));
 				string rest = it->substr(2);
@@ -138,179 +143,25 @@ std::vector<std::string> OP::separateFlags(std::vector<std::string>& sVec) {
 /* ========== Argument parser definitions ========= */
 
 OptParser::OptParser(const std::string& _name) :
-		done(false), argv(""), name(_name) {
+				done(false),
+				argv(""),
+				name(_name)
+{
 }
 
-OptParser::~OptParser() {
+void OptParser::add_opt(const OP::Type type, const std::string& name,
+		const std::string& def, const char flag, const bool required,
+		const std::string& help)
+{
+	_options[name] = {def, 0, false, required, flag, help, type};
 }
 
-template<>
-void OptParser::addOpt<int>(const std::string& name, const int def,
-		const char flag, const bool required, const std::string& help) {
-	infoMap[name] = {0, false, required, flag, help, OP::OptType::INT};
-	intMap[name] = def;
-}
-
-template<>
-void OptParser::addOpt<bool>(const std::string& name, const bool def,
-		const char flag, const bool required, const std::string& help) {
-	infoMap[name] = {0, false, required, flag, help, OP::OptType::BOOL};
-	boolMap[name] = def;
-}
-
-template<>
-void OptParser::addOpt<float>(const std::string& name, const float def,
-		const char flag, const bool required, const std::string& help) {
-	infoMap[name] = {0, false, required, flag, help, OP::OptType::FLOAT};
-	floatMap[name] = def;
-}
-
-template<>
-void OptParser::addOpt<std::string>(const std::string& name,
-		const std::string def, const char flag, const bool required,
-		const std::string& help) {
-	infoMap[name] = {0, false, required, flag, help, OP::OptType::STRING};
-	stringMap[name] = def;
-}
-
-void OptParser::addOptList(const std::string& name, const char flag,
-		const bool required, const std::string& help) {
-	using namespace OP;
-
-	infoMap[name] = {0, false, required, flag, help, OP::OptType::VSTRING};
-}
-
-std::vector<std::string> OptParser::getOptList(
-		const std::string& name) const {
-	using namespace std;
-
-	map<string, vector<string> >::const_iterator it;
-	if ((it = vecMap.find(name)) == vecMap.end()) {
-		string errstr = "Non-existent argument \"" + name + "\" requested";
-		help();
-		throw(OP::OptParseExcept(errstr.c_str()));
-	}
-
-	return it->second;
-}
-
-template<>
-bool OptParser::getOpt<bool>(const std::string& name) const {
-	using namespace std;
-
-	map<string, bool>::const_iterator it = boolMap.begin();
-	if ((it = boolMap.find(name)) == boolMap.end()) {
-		string errstr = "Non-existent argument \"" + name + "\" requested";
-		help();
-		throw(OP::OptParseExcept(errstr.c_str()));
-	}
-
-	return it->second;
-}
-
-template<>
-int OptParser::getOpt<int>(const std::string& name) const {
-	using namespace std;
-
-	map<string, int>::const_iterator it;
-	if ((it = intMap.find(name)) == intMap.end()) {
-		string errstr = "Non-existent argument \"" + name + "\" requested";
-		help();
-		throw(OP::OptParseExcept(errstr.c_str()));
-	}
-
-	return it->second;
-}
-
-template<>
-float OptParser::getOpt<float>(const std::string& name) const {
-	using namespace std;
-
-	map<string, float>::const_iterator it;
-	if ((it = floatMap.find(name)) == floatMap.end()) {
-		string errstr = "Non-existent argument \"" + name + "\" requested";
-		help();
-		throw(OP::OptParseExcept(errstr.c_str()));
-	}
-
-	return it->second;
-}
-
-template<>
-std::string OptParser::getOpt<std::string>(const std::string& name) const {
-	using namespace std;
-
-	map<string, string>::const_iterator it;
-	if ((it = stringMap.find(name)) == stringMap.end()) {
-		string errstr = "Non-existent argument \"" + name + "\" requested";
-		help();
-		throw(OP::OptParseExcept(errstr.c_str()));
-	}
-
-	return it->second;
-}
-
-std::map<std::string, OP::OptInfo>::const_iterator OptParser::matchArg(
-		const std::string& opt, const bool isFlag) const {
-	using namespace std;
-	typedef map<string, OP::OptInfo>::const_iterator constit;
-
-	string errstr;
-	if (isFlag) {
-		char flag = opt[1];
-		for (constit it = infoMap.begin(); it != infoMap.end(); it++) {
-			if (flag == it->second.flag) {
-				return it;
-			}
-		}
-		errstr = "Invalid short flag argument " + opt + " given";
-		throw(OP::OptParseExcept(errstr.c_str()));
-	} else {
-		string base = opt.substr(2);
-		for (constit it = infoMap.begin(); it != infoMap.end(); it++) {
-			if (base == it->first) {
-				return it;
-			}
-		}
-		errstr = "Invalid long flag argument " + opt + " given";
-		throw(OP::OptParseExcept(errstr.c_str()));
-	}
-
-}
-
-std::map<std::string, OP::OptInfo>::iterator OptParser::matchArg(
-		const std::string& opt, const bool isFlag) {
-	using namespace std;
-	typedef map<string, OP::OptInfo>::iterator mapit;
-
-	string errstr;
-	if (isFlag) {
-		char flag = opt[1];
-		for (mapit it = infoMap.begin(); it != infoMap.end(); it++) {
-			if (flag == it->second.flag) {
-				return it;
-			}
-		}
-		errstr = "Invalid short  flag argument " + opt + " given";
-		throw(OP::OptParseExcept(errstr.c_str()));
-	} else {
-		string base = opt.substr(2);
-		for (mapit it = infoMap.begin(); it != infoMap.end(); it++) {
-			if (base == it->first) {
-				return it;
-			}
-		}
-		errstr = "Invalid long flag argument " + opt + " given";
-		throw(OP::OptParseExcept(errstr.c_str()));
-	}
-
-}
-
-unsigned OptParser::parse(const int argc, char * _argv[]) {
+unsigned OptParser::parse(const int argc, char * _argv[])
+{
 	using namespace std;
 	using namespace OP;
 
-	if (infoMap.empty() || done)
+	if (_options.empty() || done)
 		return 0;
 
 	for (int i = 0; i < argc; i++) {
@@ -321,79 +172,67 @@ unsigned OptParser::parse(const int argc, char * _argv[]) {
 	return parse(argv);
 }
 
-unsigned OptParser::parse(const std::string& _argv) {
+unsigned OptParser::parse(const std::string& _argv)
+{
 	using namespace std;
 	using namespace OP;
 
-	if (infoMap.empty() || done)
+	if (_options.empty() || done)
 		return 0;
 
 	argv = _argv;
 
 	vector<string> argvec = split(argv);
-	argvec = separateFlags(argvec);
+	argvec = separate_flags(argvec);
 	string errstr;
 
 	bool addToVec = false;
 	string prevVec;
 	unsigned total = 0;
 
-	map<string, OptInfo>::iterator mapit;
+	ParsingState state = ParsingState::FINDING_FLAG;
+	auto last_flag = _options.begin();
 	for (auto it = argvec.begin(); it != argvec.end(); it++) {
-		if (isFlag(*it)) {
-			mapit = matchArg(*it, true);
-			addToVec = false;
-		} else if (isLongFlag(*it)) {
-			mapit = matchArg(*it, false);
-			addToVec = false;
-		} else if (addToVec) {
-			++total;
-			vecMap[prevVec].push_back(*it);
-			continue;
-		} else
-			continue;
-
-		OP::OptInfo& info = mapit->second;
-		string name = mapit->first;
-		info.found = true;
-
-		stringstream possible;
-		string p;
-		auto next = it + 1;
-		if (next == argvec.end() && info.type != OptType::BOOL) {
-			errstr = "Option not given for argument\"" + name + "\"";
-			help();
-			throw(OptParseExcept(errstr.c_str()));
-		}
-
-		float f;
-		int i;
-		string s;
-
-		switch (info.type) {
-		case OptType::INT:
-			possible << *next;
-			possible >> i;
-			intMap[name] = i;
-			++total;
+		switch (state) {
+		case FINDING_FLAG:
+			if (is_flag(*it) || is_long_flag(*it)) {
+				last_flag =
+						std::find_if(_options.begin(), _options.end(),
+								[&](decltype(*_options.begin()) pair) -> bool {
+									if (pair.second.flag == (*it)[1] || pair.first == *it) return true;
+									return false;
+								});
+				if (last_flag == _options.end()) {
+					errstr = "Invalid option " + *it + " given";
+					throw(OP::OptParseExcept(errstr.c_str()));
+				}
+				last_flag->second.found = true;
+				if (last_flag->second.type != Type::BOOL)
+					state = FINDING_ARG;
+				else {
+					last_flag->second.found = true;
+					last_flag->second.count++;
+					auto& option = last_flag->second;
+					if (option.val == "true")
+						option.val = "false";
+					else
+						option.val = "true";
+				}
+				continue;
+			}
 			break;
-		case OptType::FLOAT:
-			p = *next;
-			f = saferFloat(p);
-			floatMap[name] = f;
+		case FINDING_ARG:
+			if (is_flag(*it) || is_long_flag(*it)) {
+				errstr = "Option not given for argument\"" + *it + "\"";
+				help();
+				throw(OptParseExcept(errstr.c_str()));
+			}
+			last_flag->second.val = *it;
+			last_flag->second.found = true;
+			last_flag->second.count++;
+			if (last_flag->second.type != OP::VSTRING)
+				state = FINDING_FLAG;
 			++total;
-			break;
-		case OptType::STRING:
-			stringMap[name] = *next;
-			++total;
-			break;
-		case OptType::BOOL:
-			boolMap[name] = !boolMap[name];
-			++total;
-			break;
-		case OptType::VSTRING:
-			prevVec = name;
-			addToVec = true;
 			break;
 		}
 
@@ -403,38 +242,36 @@ unsigned OptParser::parse(const std::string& _argv) {
 	return total;
 }
 
-void OptParser::clear() {
+void OptParser::clear()
+{
 	done = false;
-	infoMap.clear();
-	intMap.clear();
-	boolMap.clear();
-	floatMap.clear();
+	_options.clear();
 	argv.clear();
 }
 
 #define opreq( x ) ( x ? "Yes" : "No")
 #define ops( x ) ( x == OptType::BOOL ? "" : ( x == OptType::VSTRING ? upname+"... " : upname) )
 
-void OptParser::help() const {
+void OptParser::help() const
+{
 	using namespace std;
 	using namespace OP;
 
 	cout << "Usage:\t./" << name << " ";
 
-	for (auto it = infoMap.begin(); it != infoMap.end(); it++) {
-		const OptInfo info = it->second;
+	for (auto it = _options.begin(); it != _options.end(); it++) {
+		const Option info = it->second;
 		string upname = it->first;
 		for (char& c : upname)
 			c = toupper(c);
 
-		cout << "[--" << it->first << " " << ops(info.type)
-		<< "] ";
+		cout << "[--" << it->first << " " << ops(info.type) << "] ";
 	}
 	cout << endl;
 
 	cout << "Options:\n\n";
-	for (auto it = infoMap.begin(); it != infoMap.end(); it++) {
-		const OptInfo info = it->second;
+	for (auto it = _options.begin(); it != _options.end(); it++) {
+		const Option info = it->second;
 		string upname = it->first;
 		for (char& c : upname)
 			c = toupper(c);

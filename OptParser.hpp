@@ -26,34 +26,17 @@ typedef enum OptType {
 std::vector<std::string> split(const std::string& str, const char separator =
 		' ');
 
-/* Takes a vector
- * and searches for the element given involved, returning an
- * iterator pointing to itindicating it's position
- */
-template<typename T>
-typename std::vector<T>::iterator find(const T& elem, std::vector<T>&);
-
-template<typename T>
-typename std::vector<T>::const_iterator find(const T& elem, const std::vector<T>&);
-
 /*
- * Prints a vector of, with
- * each string on a newline
+ * Takes in two iterators and prints out the range between them
+ * Optional separator argument
  */
-template<typename T>
-void printVec(const std::vector<T>&, const char separator = '\n');
-
+template<typename output_iter>
+void print_series(output_iter begin, const output_iter end, const std::string& separator = " ");
 /* Attempt to make float input a bit safer
  */
-float saferFloat(const std::string &);
+float safer_float(const std::string &);
 
-/* checks if a string is a short option or series thereof */
-bool isFlag(const std::string& s);
 
-/* checks if a string is a long option or series thereof */
-bool isLongFlag(const std::string& s);
-
-std::vector<std::string> separateFlags(std::vector<std::string>&);
 
 /* Custom exception class for argument parser */
 struct OptParseExcept: public std::exception {
@@ -69,17 +52,6 @@ private:
 	const char *msg;
 };
 
-/* simple struct
- * to store info on an arg
- */
-struct OptInfo {
-	unsigned short count;
-	bool found;
-	bool required;
-	char flag;
-	std::string help;
-	OP::Type type;
-};
 
 /*
  * Simple class to parse arguments. The Highlights are:
@@ -107,7 +79,6 @@ public:
 	/* Constructor sets name displayed as program name in help string
 	 */
 	OptParser(const std::string& name = "program");
-	~OptParser();
 
 	/* Once parsing had been done, you have to
 	 * call this function if you want to add new arguments
@@ -115,21 +86,15 @@ public:
 	 */
 	void clear();
 
-	/* Function to add arguments */
-	template<typename T>
-	void addOpt(const std::string& name, const T def, const char flag,
-			const bool required = false, const std::string& help = "");
+	/* Function to register arguments */
+	void add_opt(const OP::Type type, const std::string& name, const std::string& def,
+			const char flag, const bool required = false, const std::string& help = "");
 
 	/* Function to add argument vector */
-	void addOptList(const std::string& name, const char flag,
-			const bool required = false, const std::string& help = "");
+
 
 	/* Function to return arguments of various types */
-	template<typename T>
-	T getOpt(const std::string&) const;
 
-	/* Function to return argument vector */
-	std::vector<std::string> getOptList(const std::string&) const;
 
 	/* Can parse argc and argv or  a string */
 	unsigned parse(const int argc, char *argv[]);
@@ -150,12 +115,27 @@ public:
 	/* To print help message */
 	void help() const;
 
+	void print() const
+	{
+		for (auto & opt : _options) {
+			std::cout << "(" << opt.first << "," << opt.second.found << "," << opt.second.val << "," << opt.second.count << ")\n";
+		}
+	}
+
 private:
-	std::map<std::string, OptInfo> infoMap;
-	std::map<std::string, int> intMap;
-	std::map<std::string, bool> boolMap;
-	std::map<std::string, float> floatMap;
-	std::map<std::string, std::string> stringMap;
+	struct Option {
+		std::string val;
+		unsigned short count;
+		bool found;
+		bool required;
+		char flag;
+		std::string help;
+		OP::Type type;
+	};
+
+	enum ParsingState { FINDING_FLAG, FINDING_ARG};
+
+	std::map<std::string, Option> _options;
 	std::map<std::string, std::vector<std::string> > vecMap;
 	bool done;
 
@@ -163,37 +143,28 @@ private:
 	std::string argv;
 	std::string name;
 
-	std::map<std::string, OptInfo>::const_iterator matchArg(const std::string&,
-			const bool) const;
-	std::map<std::string, OptInfo>::iterator matchArg(const std::string&,
-			const bool);
+	/* checks if a string is a short option or series thereof */
+	bool is_flag(const std::string& s);
+
+	/* checks if a string is a long option or series thereof */
+	bool is_long_flag(const std::string& s);
+
+	std::vector<std::string> separate_flags(std::vector<std::string>&);
+
 };
 }
 
-template<typename T>
-void OP::printVec(const std::vector<T>& vec, const char separator) {
-	for (auto &elem : vec)
-		std::cout << elem << separator;
-	std::cout << '\n';
-}
+template<typename output_iter>
+void OP::print_series(output_iter begin, const output_iter end, const std::string& separator)
+{
+	using std::cout;
 
-template<typename T>
-typename std::vector<T>::iterator OP::find(const T& elem, std::vector<T>& vec) {
-	typename std::vector<T>::iterator it;
-	for (it = vec.begin(); it != vec.end(); it++) {
-		if (*it == elem)
-			break;
-	}
-	return it;
-}
+	cout << "(";
+	if (begin != end) cout << *begin++;
 
-template<typename T>
-typename std::vector<T>::const_iterator OP::find(const T& elem, const std::vector<T>& vec) {
-	typename std::vector<T>::const_iterator it;
-	for (it = vec.begin(); it != vec.end(); it++) {
-		if (*it == elem)
-			break;
+	for (;begin != end; begin++) {
+		cout << separator << *begin ;
 	}
-	return it;
+	cout << ")";
 }
 #endif /* OPTPARSER_HPP_ */
