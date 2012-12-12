@@ -9,15 +9,17 @@
 #define OPTPARSER_HPP_
 
 #include <exception>
+#include <functional>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace OP {
-typedef enum OptType {
-	INT, BOOL, FLOAT, STRING, VSTRING
+typedef enum  {
+	OPTION, FLAG, LIST
 } Type;
 
 /* Takes a std::string and splits it by given separator
@@ -31,97 +33,51 @@ std::vector<std::string> split(const std::string& str, const char separator =
  * Optional separator argument
  */
 template<typename output_iter>
-void print_series(output_iter begin, const output_iter end, const std::string& separator = " ");
-/* Attempt to make float input a bit safer
- */
-float safer_float(const std::string &);
-
-
+void print_series(output_iter begin, const output_iter end,
+		const std::string& separator = " ");
 
 /* Custom exception class for argument parser */
 struct OptParseExcept: public std::exception {
 	OptParseExcept(const char * _msg) :
-			msg(_msg) {
+					msg(_msg)
+	{
 	}
-	~OptParseExcept() {
+	~OptParseExcept()
+	{
 	}
-	const char * what() const throw () {
+	const char * what() const throw ()
+	{
 		return msg;
 	}
 private:
 	const char *msg;
 };
 
-
 /*
  * Simple class to parse arguments. The Highlights are:
- * 	A templated addarg method, to tell it what to look for.
- * 	A templated getarg method, which will return the argument you want.
+ * A simple add_opt method to register arguments. You
+ * 	A templated get_opt method, which will return the argument you want.
+ * 	It can parse either an (int argc, char **argv) pair, or a std::string.
+ * 	You can control how arguments are converted from strings to other types.
  *
- * The arguments are stored in maps, and so are accessed by the name you
- * 	give them in the addarguments method
+ * The arguments are stored as a string in a std::map, and so are accessed
+ * 	by the name you	give them in the add_opt method. Since they are all
+ * 	stored as strings, they are only converted to the relevant types when
+ * 	you call the get_opt<T> method.
+ *
+ * You can control how your options are converted to the proper types
+ * 	by providing a lambda/function object to the get_opt<T> method.
+ *
+ * The parser also provides a default help message based on your option
+ * 	types and help strings you pass in when registering options.
  *
  * The parse method can be called either on an (int argc, char **argv) pair or
  * 	a std::string.
  *
  * There are no static or global variables so you can have as many parsers as
  * 	you want.
- *
- * The parser can take arguments of 5 types, int, bool, float, string, list of strings.
- * 	the boolean option flag takes no argument
- *
- * You can specify if any option is required or not, as well as default values for all
- * 	but the string list option types.
  */
 class OptParser {
-public:
-
-	/* Constructor sets name displayed as program name in help string
-	 */
-	OptParser(const std::string& name = "program");
-
-	/* Once parsing had been done, you have to
-	 * call this function if you want to add new arguments
-	 * and parse something else
-	 */
-	void clear();
-
-	/* Function to register arguments */
-	void add_opt(const OP::Type type, const std::string& name, const std::string& def,
-			const char flag, const bool required = false, const std::string& help = "");
-
-	/* Function to add argument vector */
-
-
-	/* Function to return arguments of various types */
-
-
-	/* Can parse argc and argv or  a string */
-	unsigned parse(const int argc, char *argv[]);
-	unsigned parse(const std::string&);
-
-	/* You can get the argv last parsed.
-	 * as well as a vector with each string sorted in
-	 * the order they were parsed
-	 */
-	std::string getArgv() const {
-		return argv;
-	}
-
-	std::vector<std::string> getSortedArgv() {
-		return sortedArgv;
-	}
-
-	/* To print help message */
-	void help() const;
-
-	void print() const
-	{
-		for (auto & opt : _options) {
-			std::cout << "(" << opt.first << "," << opt.second.found << "," << opt.second.val << "," << opt.second.count << ")\n";
-		}
-	}
-
 private:
 	struct Option {
 		std::string val;
@@ -133,15 +89,77 @@ private:
 		OP::Type type;
 	};
 
-	enum ParsingState { FINDING_FLAG, FINDING_ARG};
+	template<class T>
+	struct Getter {
+		T operator()(const std::string& option)
+		{
+			std::stringstream ss(option);
+			T t;
+			ss >> t;
+			return t;
+		}
 
-	std::map<std::string, Option> _options;
-	std::map<std::string, std::vector<std::string> > vecMap;
+		T t;
+	};
+
+public:
+
+	/* Constructor sets name displayed as program name in help string
+	 */
+	OptParser(const std::string& name = "program");
+
+	OptParser(const OptParser&) = default;
+	OptParser(OptParser&&) = default;
+	OptParser& operator=(const OptParser&) = default;
+	OptParser& operator=(OptParser&&) = default;
+
+	/* Once parsing had been done, you have to
+	 * call this function if you want to add new arguments
+	 * and parse something else
+	 */
+	void clear();
+
+	/* Function to register arguments
+	 * The type parameter indicates whether the option takes no
+	 * arguments, one argument, or many
+	 * */
+	void add_opt(const std::string& name, const std::string& def,
+			const char flag, const bool required = false,
+			const std::string& help = "", OP::Type type = OPTION);
+
+	/* Function to return arguments of various types
+	 * You can provide your own function for converting from a string
+	 * to the desired type. The provided default uses std::stringstream
+	 * capabilities
+	 * */
+	template<class T>
+	T get_as(const std::string& name, std::function<T(std::string)> getter = Getter<T>());
+
+	/* Can parse argc and argv or  a string */
+	unsigned parse(const int argc, char *argv[]);
+	unsigned parse(const std::string&);
+
+	/* You can get the argv last parsed.
+	 * as well as a vector with each string sorted in
+	 * the order they were parsed
+	 */
+	std::string get_argv() const
+	{
+		return m_argv;
+	}
+
+	/* To print help message */
+	void help() const;
+
+	/* Prints out list and status of arguments */
+	void print(std::ostream& os = std::cout) const;
+
+private:
+	std::map<std::string, Option> m_options;
 	bool done;
 
-	std::vector<std::string> sortedArgv;
-	std::string argv;
-	std::string name;
+	std::string m_argv;
+	std::string m_name;
 
 	/* checks if a string is a short option or series thereof */
 	bool is_flag(const std::string& s);
@@ -149,22 +167,59 @@ private:
 	/* checks if a string is a long option or series thereof */
 	bool is_long_flag(const std::string& s);
 
-	std::vector<std::string> separate_flags(std::vector<std::string>&);
+	/* Splits repeated option flags for easier parsing:
+	 * i.e. -mvgh ==> -m -v -g -h
+	 */
+	std::vector<std::string> separate_flags(const std::vector<std::string>&);
 
+	enum ParsingState {
+		FINDING_FLAG, FINDING_ARG
+	};
 };
 }
 
 template<typename output_iter>
-void OP::print_series(output_iter begin, const output_iter end, const std::string& separator)
+void OP::print_series(output_iter begin, const output_iter end,
+		const std::string& separator)
 {
 	using std::cout;
 
 	cout << "(";
-	if (begin != end) cout << *begin++;
+	if (begin != end)
+		cout << *begin++;
 
-	for (;begin != end; begin++) {
-		cout << separator << *begin ;
+	for (; begin != end; begin++) {
+		cout << separator << *begin;
 	}
-	cout << ")";
+	cout << ")" << std::endl;
 }
+
+template<class T>
+T OP::OptParser::get_as(const std::string& name, std::function<T(std::string)> getter)
+{
+	auto option = m_options.find(name);
+	if (option == m_options.end()) {
+		std::string errstr = "Non-existent option \"" + name + "\" requested.\n";
+		throw(OptParseExcept(errstr.c_str()));
+	}
+	return getter(option->second.val);
+}
+
+
+template<>
+struct OP::OptParser::Getter<bool> {
+	bool operator()(const std::string& option)
+	{
+		return option == "true" ? true : false;
+	}
+};
+
+template<>
+struct OP::OptParser::Getter<std::vector<std::string> > {
+	std::vector<std::string> operator()(const std::string& option)
+	{
+		return OP::split(option);
+	}
+};
+
 #endif /* OPTPARSER_HPP_ */

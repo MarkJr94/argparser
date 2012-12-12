@@ -37,42 +37,64 @@ Example use:
 
 	OP::OptParser parser("OptParser_test.cpp");
 
-	parser.addOpt<bool>("lol", false, 'l', true, "I am here to test you ");
-	parser.addOpt<int>("rofl", 25, 'r', true, "I am here to test you as well");
-	parser.addOpt<bool>("mao", true, 'm', false,
-			longstring + " This string tests my wrapping");
-	parser.addOptList("hare", 'h', true, "I test vector input");
+	parser.add_opt("length", "20", 'l', true, " Length of arms in centimeters");
+	parser.add_opt("height", "20", 'h', true, "Height of individual");
+	parser.add_opt("name", "Kinsman", 'n', true, "Name of individual");
+	parser.add_opt("mao", "false", 'm', false,
+			"Is the individual Mao Zedong? " + longstring
+					+ " This string tests my wrapping", OP::FLAG);
+	parser.add_opt("numbers", "20 52 52 63 58", 'a', true,
+			"Individual's favorite numbers", OP::LIST);
 
-	parser.parse("./go-again -lm --rofl 334 -h 1 2 3 4 5");
+	string test_1 =
+			"./go -l  -6001.45e-2 -h 45 -a 25 48 62  48 62 98 16 4 84 -n Joe -mmmm";
+	parser.parse(test_1);
 
-	assert(parser.getOpt<int>("rofl") == 334);
-	assert(parser.getOpt<bool>("lol") == true);
-	assert(parser.getOpt<bool>("mao") == false);
+	auto always_zero = [](const std::string&) -> float {return 0;};
+	auto str_to_bool =
+			[](const string& s) -> bool {return s == "true" ? true : false;};
 
-	cout << "Expect: \"1 2 3 4 5\"\n";
-	OP::printVec(parser.getOptList("hare"), ' ');
+	assert(parser.get_as<int>("height") == 45);
+	assert(parser.get_as<float>("length") - -6001.45e-2 < .00001);
+	assert(parser.get_as<bool>("mao") == true);
+	assert(parser.get_as<string>("name") == "Joe");
+	assert(parser.get_as<bool>("mao", str_to_bool) == true);
+	assert(parser.get_as<float>("length", always_zero) == 0);
+
+	/* Testing series parsing */
+	auto numbers = parser.get_as<vector<string>>("numbers");
+
+	cout << "Expect: (25, 48, 62, 48, 62, 98, 16, 4, 84)\n";
+	cout << "Result: ";
+	OP::print_series(numbers.begin(),numbers.end(),", ");
+	cout << endl;
 
 	parser.help();
+	cout << "Parser testing successful!\n";
 
-Output:
+Terminal Output:
 
-	Expect: "1 2 3 4 5"
-	1 2 3 4 5 
-	Usage:	./OptParser_test.cpp [--hare HARE... ] [--lol ] [--mao ] [--rofl ROFL] 
+	Expect: (25, 48, 62, 48, 62, 98, 16, 4, 84)
+	Result: (25, 48, 62, 48, 62, 98, 16, 4, 84)
+	Usage:	./OptParser_test.cpp [--height HEIGHT] [--length LENGTH] [--mao ] [--name NAME] [--numbers NUMBERS... ] 
 	Options:
 	
-	--hare (-h)	Required: Yes	Type: VECTOR
-		I test vector input
+	--height (-h)	Required: Yes	Type: OPTION
+		Height of individual
 	
-	--lol (-l)	Required: Yes	Type: BOOL
-		I am here to test you 
+	--length (-l)	Required: Yes	Type: OPTION
+		 Length of arms in centimeters
 	
-	--mao (-m)	Required: No	Type: BOOL
-		Unlike traditional c-strings, which are mere sequences of characters 
-			in a memory array, C++ string objects belong to a class with 
-			many built-in features to operate with strings in a more intuitive 
-			way and with some additional useful features common to C++ containers. 
-			This string tests my wrapping
+	--mao (-m)	Required: No	Type: FLAG
+		Is the individual Mao Zedong? Unlike traditional c-strings, which 
+			are mere sequences of characters in a memory array, C++ string 
+			objects belong to a class with many built-in features to operate 
+			with strings in a more intuitive way and with some additional 
+			useful features common to C++ containers. This string tests my 
+			wrapping
 	
-	--rofl (-r)	Required: Yes	Type: INT
-		I am here to test you as well
+	--name (-n)	Required: Yes	Type: OPTION
+		Name of individual
+	
+	--numbers (-a)	Required: Yes	Type: LIST
+		Individual's favorite numbers

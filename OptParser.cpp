@@ -19,6 +19,9 @@
 
 using namespace OP;
 
+bool db = false;
+#define $ if(db)
+
 std::vector<std::string> OP::split(const std::string& str, const char separator)
 {
 	using namespace std;
@@ -42,58 +45,7 @@ std::vector<std::string> OP::split(const std::string& str, const char separator)
 	return ret;
 }
 
-float OP::safer_float(const std::string & ss)
-{
-	using namespace std;
-
-	float d1;
-	int pos, minPos, decPos, ePos;
-
-	string validChars = "0123456789-.e";
-	/* Check for valid characters */
-	if ((pos = ss.find_first_not_of(validChars)) != string::npos) {
-		throw(OptParseExcept("Invalid character in double input"));
-	}
-
-	/* Check decimal */
-	if ((decPos = ss.find_first_of('.') != ss.find_last_of('.'))) {
-		throw(OptParseExcept("Too many decimals"));
-	}
-
-	/* Check for exponentiation */
-	if ((ePos = ss.find_first_of("eE")) != string::npos) {
-		if (ePos != ss.find_last_of("eE")) {
-			throw(OptParseExcept("Too many 'e's"));
-		}
-
-		if (ePos < decPos) {
-			throw(OptParseExcept("Invalid placement of exponentiation"));
-		}
-	}
-
-	int rminPos;
-	/* Check signage */
-	if ((minPos = ss.find_first_of('-')) != string::npos) {
-		if (minPos != (rminPos = ss.find_last_of('-'))) {
-			if (rminPos != ePos + 1)
-				throw OptParseExcept("Too many '-'s");
-		}
-
-		if (minPos > ss.find_first_not_of(" \t\n\r", 0)) {
-			throw OptParseExcept("Incorrect placement of '-'");
-		}
-	}
-
-	stringstream sss(ss);
-	sss >> d1;
-	if (sss.fail()) {
-		throw OptParseExcept("float input failed");
-	}
-
-	return d1;
-}
-
-bool OP::is_flag(const std::string& s)
+bool OP::OptParser::is_flag(const std::string& s)
 {
 	if (s.empty())
 		return false;
@@ -104,7 +56,7 @@ bool OP::is_flag(const std::string& s)
 	return false;
 }
 
-bool OP::is_long_flag(const std::string& s)
+bool OP::OptParser::is_long_flag(const std::string& s)
 {
 	if (s.empty())
 		return false;
@@ -114,13 +66,14 @@ bool OP::is_long_flag(const std::string& s)
 	return false;
 }
 
-std::vector<std::string> OP::separate_flags(std::vector<std::string>& sVec)
+std::vector<std::string> OP::OptParser::separate_flags(
+		const std::vector<std::string>& sVec)
 {
 	using namespace std;
 
 	vector<string> ret;
 
-	for (vector<string>::iterator it = sVec.begin(); it != sVec.end(); it++) {
+	for (auto it = sVec.begin(); it != sVec.end(); it++) {
 		if (is_flag(*it)) {
 			if (it->size() > 2) {
 				ret.push_back(it->substr(0, 2));
@@ -142,100 +95,127 @@ std::vector<std::string> OP::separate_flags(std::vector<std::string>& sVec)
 
 /* ========== Argument parser definitions ========= */
 
-OptParser::OptParser(const std::string& _name) :
+OptParser::OptParser(const std::string& name) :
 				done(false),
-				argv(""),
-				name(_name)
+				m_argv(""),
+				m_name(name)
 {
 }
 
-void OptParser::add_opt(const OP::Type type, const std::string& name,
-		const std::string& def, const char flag, const bool required,
-		const std::string& help)
+void OptParser::add_opt(const std::string& name, const std::string& def,
+		const char flag, const bool required, const std::string& help, OP::Type type)
 {
-	_options[name] = {def, 0, false, required, flag, help, type};
+	m_options[name] = {def, 0, false, required, flag, help, type};
 }
 
-unsigned OptParser::parse(const int argc, char * _argv[])
+unsigned OptParser::parse(const int argc, char * argv[])
 {
 	using namespace std;
 	using namespace OP;
 
-	if (_options.empty() || done)
+	if (m_options.empty() || done)
 		return 0;
 
+	string argv_str;
 	for (int i = 0; i < argc; i++) {
-		argv += _argv[i];
-		argv += " ";
+		argv_str += argv[i];
+		argv_str += " ";
 	}
 
-	return parse(argv);
+	return parse(argv_str);
 }
 
-unsigned OptParser::parse(const std::string& _argv)
+unsigned OptParser::parse(const std::string& argv)
 {
 	using namespace std;
 	using namespace OP;
 
-	if (_options.empty() || done)
+	if (m_options.empty() || done)
 		return 0;
 
-	argv = _argv;
+	m_argv = argv;
 
-	vector<string> argvec = split(argv);
+	vector<string> argvec = split(m_argv);
 	argvec = separate_flags(argvec);
 	string errstr;
 
-	bool addToVec = false;
-	string prevVec;
+	$ cout << "Split up argvec:";
+	$ print_series(argvec.begin(), argvec.end());
+	$ cout << endl;
+
 	unsigned total = 0;
 
 	ParsingState state = ParsingState::FINDING_FLAG;
-	auto last_flag = _options.begin();
+	auto last_flag = m_options.begin();
 	for (auto it = argvec.begin(); it != argvec.end(); it++) {
 		switch (state) {
 		case FINDING_FLAG:
 			if (is_flag(*it) || is_long_flag(*it)) {
 				last_flag =
-						std::find_if(_options.begin(), _options.end(),
-								[&](decltype(*_options.begin()) pair) -> bool {
+						std::find_if(m_options.begin(), m_options.end(),
+								[&](decltype(*m_options.begin()) pair) -> bool {
 									if (pair.second.flag == (*it)[1] || pair.first == *it) return true;
 									return false;
 								});
-				if (last_flag == _options.end()) {
+				if (last_flag == m_options.end()) {
 					errstr = "Invalid option " + *it + " given";
 					throw(OP::OptParseExcept(errstr.c_str()));
 				}
 				last_flag->second.found = true;
-				if (last_flag->second.type != Type::BOOL)
+				if (last_flag->second.type != Type::FLAG)
 					state = FINDING_ARG;
 				else {
+					auto& option = last_flag->second;
+					if (option.count == 0) {
+						if (option.val == "true")
+							option.val = "false";
+						else
+							option.val = "true";
+					}
+
 					last_flag->second.found = true;
 					last_flag->second.count++;
-					auto& option = last_flag->second;
-					if (option.val == "true")
-						option.val = "false";
-					else
-						option.val = "true";
 				}
 				continue;
 			}
 			break;
 		case FINDING_ARG:
 			if (is_flag(*it) || is_long_flag(*it)) {
-				errstr = "Option not given for argument\"" + *it + "\"";
-				help();
-				throw(OptParseExcept(errstr.c_str()));
+				if (last_flag->second.count == 0) {
+					errstr = "Option not given for argument \"" + *it + "\"";
+					help();
+					throw(OptParseExcept(errstr.c_str()));
+				} else {
+					it--;
+					state = FINDING_FLAG;
+					break;
+				}
 			}
-			last_flag->second.val = *it;
+			if (last_flag->second.type == OP::LIST) {
+				if (last_flag->second.count > 0) last_flag->second.val += *it + " ";
+				else last_flag->second.val = *it + " ";
+				$ cout << "List arg found \n";
+			} else {
+				last_flag->second.val = *it;
+				state = FINDING_FLAG;
+			}
 			last_flag->second.found = true;
 			last_flag->second.count++;
-			if (last_flag->second.type != OP::VSTRING)
-				state = FINDING_FLAG;
 			++total;
 			break;
 		}
 
+	}
+
+	auto unfound = std::find_if(m_options.begin(), m_options.end(),
+			[&](decltype(*m_options.begin()) pair) -> bool {
+				if (pair.second.required && !pair.second.found) return true;
+				return false;
+			});
+
+	if (unfound != m_options.end()) {
+		errstr = "Required option \"" + unfound->first + "\" not given.";
+		throw(OptParseExcept(errstr.c_str()));
 	}
 
 	done = true;
@@ -245,21 +225,21 @@ unsigned OptParser::parse(const std::string& _argv)
 void OptParser::clear()
 {
 	done = false;
-	_options.clear();
-	argv.clear();
+	m_options.clear();
+	m_argv.clear();
 }
 
 #define opreq( x ) ( x ? "Yes" : "No")
-#define ops( x ) ( x == OptType::BOOL ? "" : ( x == OptType::VSTRING ? upname+"... " : upname) )
+#define ops( x ) ( x == Type::FLAG ? "" : ( x == Type::LIST ? upname+"... " : upname) )
 
 void OptParser::help() const
 {
 	using namespace std;
 	using namespace OP;
 
-	cout << "Usage:\t./" << name << " ";
+	cout << "Usage:\t./" << m_name << " ";
 
-	for (auto it = _options.begin(); it != _options.end(); it++) {
+	for (auto it = m_options.begin(); it != m_options.end(); it++) {
 		const Option info = it->second;
 		string upname = it->first;
 		for (char& c : upname)
@@ -270,7 +250,7 @@ void OptParser::help() const
 	cout << endl;
 
 	cout << "Options:\n\n";
-	for (auto it = _options.begin(); it != _options.end(); it++) {
+	for (auto it = m_options.begin(); it != m_options.end(); it++) {
 		const Option info = it->second;
 		string upname = it->first;
 		for (char& c : upname)
@@ -282,20 +262,14 @@ void OptParser::help() const
 		cout << "\tType: ";
 
 		switch (info.type) {
-		case OptType::INT:
-			cout << "INT\n";
+		case Type::OPTION:
+			cout << "OPTION\n";
 			break;
-		case OptType::FLOAT:
-			cout << "FLOAT\n";
+		case Type::LIST:
+			cout << "LIST\n";
 			break;
-		case OptType::BOOL:
-			cout << "BOOL\n";
-			break;
-		case OptType::STRING:
-			cout << "STRING\n";
-			break;
-		default:
-			cout << "VECTOR\n";
+		case Type::FLAG:
+			cout << "FLAG\n";
 			break;
 		}
 
@@ -310,5 +284,17 @@ void OptParser::help() const
 			i++;
 		}
 		cout << "\n\n";
+	}
+}
+
+void OptParser::print(std::ostream& os) const
+{
+	auto found =
+			[](const bool b) -> std::string {return b ? "found" : "not found'";};
+
+	for (auto & opt : m_options) {
+		os << "(Name: " << opt.first << ", Status: "
+				<< found(opt.second.found) << ", Value: {" << opt.second.val
+				<< "}, Count: " << opt.second.count << ")\n";
 	}
 }
