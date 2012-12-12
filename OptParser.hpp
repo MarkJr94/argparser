@@ -129,8 +129,10 @@ public:
 
 	/* Function to return arguments of various types
 	 * You can provide your own function for converting from a string
-	 * to the desired type. The provided default uses std::stringstream
-	 * capabilities
+	 * to the desired type. The provided defaults use std::stringstream
+	 * capabilities. The boolean case is specialized (internally stored
+	 * as "true"/"false" strings.
+	 * There is also specialization to return a vector of strings.
 	 * */
 	template<class T>
 	T get_as(const std::string& name, std::function<T(std::string)> getter = Getter<T>());
