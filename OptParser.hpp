@@ -42,10 +42,10 @@ struct OptParseExcept: public std::exception {
 					msg(_msg)
 	{
 	}
-	~OptParseExcept()
+	~OptParseExcept() noexcept
 	{
 	}
-	const char * what() const throw ()
+	const char * what() const noexcept
 	{
 		return msg;
 	}
@@ -178,10 +178,10 @@ private:
 		FINDING_FLAG, FINDING_ARG
 	};
 };
-}
+
 
 template<typename output_iter>
-void OP::print_series(output_iter begin, const output_iter end,
+void print_series(output_iter begin, const output_iter end,
 		const std::string& separator)
 {
 	using std::cout;
@@ -223,5 +223,5 @@ struct OP::OptParser::Getter<std::vector<std::string> > {
 		return OP::split(option);
 	}
 };
-
+}
 #endif /* OPTPARSER_HPP_ */
