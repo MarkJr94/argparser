@@ -42,10 +42,10 @@ struct OptParseExcept: public std::exception {
 					msg(_msg)
 	{
 	}
-	~OptParseExcept() noexcept (true)
+	~OptParseExcept() noexcept
 	{
 	}
-	const char * what() const throw ()
+	const char * what() const noexcept
 	{
 		return msg;
 	}
@@ -222,5 +222,4 @@ struct OptParser::Getter<std::vector<std::string> > {
 	}
 };
 }
-
 #endif /* OPTPARSER_HPP_ */
