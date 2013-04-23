@@ -48,9 +48,9 @@ void test_parser(int argc, char *argv[])
 	/* Testing series parsing */
 	auto numbers = parser.get_as<vector<string>>("numbers");
 
-	cout << "Expect: (25, 48, 62, 48, 62, 98, 16, 4, 84)\n";
+	cout << "Expect: 25, 48, 62, 48, 62, 98, 16, 4, 84\n";
 	cout << "Result: ";
-	OP::print_series(numbers.begin(),numbers.end(),", ");
+	OP::print_series(begin(numbers),end(numbers),", ");
 	cout << endl;
 
 	parser.help();

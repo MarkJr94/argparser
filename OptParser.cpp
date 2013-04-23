@@ -133,6 +133,8 @@ unsigned OptParser::parse(const std::string& argv)
 	if (m_options.empty() || done)
 		return 0;
 
+	add_opt("help","",'h',false,"Show this help message",OP::Type::FLAG);
+
 	m_argv = argv;
 
 	vector<string> argvec = split(m_argv);
@@ -153,8 +155,8 @@ unsigned OptParser::parse(const std::string& argv)
 			if (is_flag(*it) || is_long_flag(*it)) {
 				last_flag =
 						std::find_if(m_options.begin(), m_options.end(),
-								[&](decltype(*m_options.begin()) pair) -> bool {
-									if (pair.second.flag == (*it)[1] || pair.first == *it) return true;
+								[&](decltype(*m_options.begin()) pr) -> bool {
+									if (pr.second.flag == (*it)[1] || pr.first == *it) return true;
 									return false;
 								});
 				if (last_flag == m_options.end()) {
@@ -216,6 +218,11 @@ unsigned OptParser::parse(const std::string& argv)
 	if (unfound != m_options.end()) {
 		errstr = "Required option \"" + unfound->first + "\" not given.";
 		throw(OptParseExcept(errstr.c_str()));
+	}
+
+	if (m_options["help"].found == true) {
+		this->help();
+		exit(0);
 	}
 
 	done = true;

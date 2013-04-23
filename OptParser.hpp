@@ -42,7 +42,7 @@ struct OptParseExcept: public std::exception {
 					msg(_msg)
 	{
 	}
-	~OptParseExcept()
+	~OptParseExcept() noexcept (true)
 	{
 	}
 	const char * what() const throw ()
@@ -98,8 +98,6 @@ private:
 			ss >> t;
 			return t;
 		}
-
-		T t;
 	};
 
 public:
@@ -178,10 +176,10 @@ private:
 		FINDING_FLAG, FINDING_ARG
 	};
 };
-}
+
 
 template<typename output_iter>
-void OP::print_series(output_iter begin, const output_iter end,
+void print_series(output_iter begin, const output_iter end,
 		const std::string& separator)
 {
 	using std::cout;
@@ -197,7 +195,7 @@ void OP::print_series(output_iter begin, const output_iter end,
 }
 
 template<class T>
-T OP::OptParser::get_as(const std::string& name, std::function<T(std::string)> getter)
+T OptParser::get_as(const std::string& name, std::function<T(std::string)> getter)
 {
 	auto option = m_options.find(name);
 	if (option == m_options.end()) {
@@ -209,7 +207,7 @@ T OP::OptParser::get_as(const std::string& name, std::function<T(std::string)> g
 
 
 template<>
-struct OP::OptParser::Getter<bool> {
+struct OptParser::Getter<bool> {
 	bool operator()(const std::string& option)
 	{
 		return option == "true" ? true : false;
@@ -217,11 +215,12 @@ struct OP::OptParser::Getter<bool> {
 };
 
 template<>
-struct OP::OptParser::Getter<std::vector<std::string> > {
+struct OptParser::Getter<std::vector<std::string> > {
 	std::vector<std::string> operator()(const std::string& option)
 	{
-		return OP::split(option);
+		return split(option);
 	}
 };
+}
 
 #endif /* OPTPARSER_HPP_ */
