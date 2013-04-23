@@ -217,6 +217,7 @@ unsigned OptParser::parse(const std::string& argv)
 
 	if (unfound != m_options.end()) {
 		errstr = "Required option \"" + unfound->first + "\" not given.";
+        this->help();
 		throw(OptParseExcept(errstr.c_str()));
 	}
 
